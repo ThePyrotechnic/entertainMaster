@@ -3,12 +3,13 @@
 #define G 3
 #define B 6
 
-#define INPUT_LEN 496 // :RRR,GGG,BBB                               <-- set new color
-//////////////////////// nnXttC,XttC,XttC,XttC,XttC,XttC... <-- program new loop
+// :RRR,GGG,BBB                               <-- set new color
+// nnXttCC,XttCC,XttCC,XttCC,XttCC,XttCC... <-- program new loop
+#define INPUT_LEN 595 
 //nn is number of colors in sequence (max 99)
 //X is 'f' (fade) or 'i' (instant)
 //tt is time (for 'i': time to wait after switching, in hundreds of millis. For 'f': time between fade steps, in millis)
-//C is a color code (given by position in states[])
+//CC is a color code (given by position in states[])
 
 //color macros
 const char* RED = ":255,000,000";
@@ -19,8 +20,11 @@ const char* PRP = ":200,000,050";
 const char* PNK = ":255,000,255";
 const char* ONG = ":255,030,000";
 const char* OFF = ":000,000,000";
-
-const char* const states[] = {RED, BLU, GRN, WHT, PRP, PNK, ONG, OFF}; // must add new macros to array
+const char* LBL = ":000,100,255";
+const char* DBL = ":000,000,040";
+const char* DWH = ":040,040,040";
+// must also add new macros to array
+const char* const states[] = {RED, BLU, GRN, WHT, PRP, PNK, ONG, OFF, LBL, DBL, DWH}; 
 
 //global current light values
 byte red = 0;
@@ -57,15 +61,17 @@ void loop() {
       memcpy(colsStr, &in, 2);
       numCols = (byte)atoi(colsStr);
 
-      char lightData[5];
+      char lightData[6]; // size of one light setting (a single 'chunk')
 
-      byte next = 2; // location of next light setting in 'in' string
+      byte next = 2; // location of next chunk in the 'in' string
 
       while (Serial.available() == 0) {
         for (int a = 0; a < numCols; a++) {
-          memcpy(lightData, &in[next], 4);
-          lightData[4] = '\0';
-          next += 5;
+          memcpy(lightData, &in[next], 5);
+          lightData[5] = '\0';
+          Serial.print("lightData: ");
+          Serial.println(lightData);
+          next += 6;
 
           parseSplit(lightData);
         }
@@ -89,9 +95,12 @@ void parseSplit(char* split) {
   memcpy(interval, &split[1], 2);
   interval[2] = '\0';
 
-  char col = split[3];
-  if (split[0] == 'f') fade(states[col - '0'], atoi(interval));
-  else stringSet(states[col - '0'], atoi(interval) * 100); //split[0] should be i // Range of interval * 100 is 100 - 9900 millis
+  char col[3];
+  memcpy(col, &split[3],2);
+  col[2] = '\0';
+  
+  if (split[0] == 'f') fade(states[atoi(col)], atoi(interval));
+  else stringSet(states[atoi(col)], atoi(interval) * 100); //split[0] should be i // Range of interval * 100 is 100 - 9900 millis
 }
 
 void fade(char* col, int dur) {

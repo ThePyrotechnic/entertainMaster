@@ -1,17 +1,22 @@
 # :RRR,GGG,BBB                             <-- set new color
-# nnXttC,XttC,XttC,XttC,XttC,XttC... <-- program new loop
+# nnXttCC,XttCC,XttCC,XttCC,XttCC,XttCC... <-- program new loop
 #   nn is number of colors in sequence (max 99)
 #   X is 'f' (fade) or 'i' (instant)
 #   tt is time (for 'i': time to wait after switching, in hundreds of millis. For 'f': time between fade steps, in millis)
-#   C is a color code (given by position in states[])
-#       0 RED
-#       1 BLU
-#       2 GRN
-#       3 WHT
-#       4 PRP
-#       5 PNK
-#       6 ONG
-#       7 OFF
+#   CC is a color code (given by position in states[])
+#   Loops repeat until another sequence is read in
+#   COLOR TABLE:
+#       0   RED
+#       1   BLU
+#       2   GRN
+#       3   WHT
+#       4   PRP
+#       5   PNK
+#       6   ONG
+#       7   OFF
+#       8   LBL - Light Blue
+#       9   DBL - Dim Blue
+#       10 DWH - Dim White
 # ex:
 # (purple) :200,000,050
 # (thunderstorm) 10f051,i501,i013,f021,i013,f021,i301,1023,f021,i601
@@ -93,7 +98,7 @@ esb_color = None
 sun_data = None
 sun_keyframes = None
 is_init = True
-sun_colors = {'rise': Color(255, 10, 0), 'mid': Color(255, 255, 255), 'set': esb_color}
+sun_colors = {'rise': Color(255, 10, 0), 'mid': Color(255, 255, 255), 'set': None}
 
 cur_weather = None
 weather_refresh_t = datetime.datetime.today()
@@ -108,12 +113,13 @@ def eprint(*args, **kwargs):
 def init():
     global esb_color, arduino, sun_data, cur_weather, sun_keyframes
     # hog the Arduino
-    arduino = serial.Serial('COM4', 9600, timeout=0.2)
+    try:
+        arduino = serial.Serial('COM4', 9600, timeout=0.2)
+    except serial.SerialException as e:
+        eprint("unable to connect to arduino. Information: ")
+        eprint('\t' + str(e))
+        exit(0)
     time.sleep(2)
-
-    # arduino.write(b'10f051,i501,i013,f021,i013,f021,i301,1023,f021,i601')
-    # arduino.write(b'05f054,f052,f050,f055,f051')
-    # arduino.write(b':255,10,0') Good sunrise color
 
     # populate the colors Dictionary
     with open('colors.txt', encoding='UTF-8') as s:
@@ -121,11 +127,11 @@ def init():
             if line[0] == '*':
                 continue
             line = line.split(',')
-            colors[line[0].lower()] = (line[1], line[2], line[3].rstrip('\n'))
+            colors[line[0].lower()] = (int(line[1]), int(line[2]), int(line[3].rstrip('\n')))
 
     # gather initial and once-per-day event data
     # order may matter!
-    esb_color = fetch_esb_color()
+    sun_colors['set'] = esb_color = fetch_esb_color()
 
     dat = fetch_weather_data()
     sun_data = (dat[0], dat[1])
@@ -133,7 +139,7 @@ def init():
     sun_keyframes = generate_sun_keys()
 
     debug_print()
-
+    cur_weather = 'SNOWING'  # TODO Remove this
     # start decision engine
     master_timer()
 
@@ -145,7 +151,7 @@ def master_timer():
         t = threading.Thread(target=event_master)
         t.start()
 
-        time.sleep(10)  # TODO change to 30 min
+        time.sleep(5)  # TODO change to 30 min
 
 
 def event_master():
@@ -158,10 +164,29 @@ def event_master():
     globals()[next_event + "_event"]()
 
 
+def update_priorities():
+    global priorities
+    # TODO remember to add any new event priorities here
+
+    priorities["weather"] = get_weather_priority()
+
+
+def update_event_data():
+    global weather_refresh_t, cur_weather
+    # TODO remember to add any new events here
+    weather_refresh = datetime.timedelta(seconds=5)  # TODO change to 1 hour
+
+    t_since_last_weather = datetime.datetime.today() - weather_refresh_t
+    if t_since_last_weather > weather_refresh:
+        print('Refreshing weather...')
+        # cur_weather = fetch_weather_data() # TODO Uncomment this
+        weather_refresh_t = datetime.datetime.today()
+
+
 def sun_event():
     global sun_keyframes, arduino
 
-    print('Firing sun_event')
+    print('\tFiring sun_event')
     if not sun_keyframes.empty():
         color = sun_keyframes.get()
         send_color_str(color.to_bytes())
@@ -170,8 +195,45 @@ def sun_event():
 
 
 def weather_event():
-    # TODO
-    print("Weather not implemented")
+    global cur_weather
+
+    print('\tFiring weather_event')
+    if "thunder" in cur_weather.lower():
+        # chunks:
+        # flash - i0103,f0201
+        # long wait - f0201,i5001
+        # short wait - f0201,i2501
+        chunks = (b'f0201,i2501', b'i0103,f0201')
+        str_to_send = b'32f0201,i5001'  # remember that the string must start with the expected number of colors
+        for _ in range(15):
+            str_to_send += b',' + random.choice(chunks)
+        send_color_str(str_to_send)
+
+    if "rain" in cur_weather.lower():
+        # chunks:
+        # long light blue - f0508,i5008
+        # long blue - f0501,i5001
+        # long dim blue - f0509,i5009
+        # short light blue - f0508,i2508
+        # short blue - f0501,i2501
+        # short dim blue - f0509,i2509
+        chunks = (b'f0508,i5008', b'f0501,i5001', b'f0508,i2508', b'f0501,i2501', b'f0501,i2501', b'f0509,i2509')
+        str_to_send = b'32f0208,i5008'
+        for _ in range(15):
+            str_to_send += b',' + random.choice(chunks)
+        send_color_str(str_to_send)
+    if "snow" in cur_weather.lower():
+        # chunks:
+        # flash - i0110,f0303
+        # long wait - f0203,i5003
+        # short wait - f0203,i2503
+        chunks = (b'f0203,i2503', b'i0110,f0303')
+        str_to_send = b'32f0203,i5003'
+        for _ in range(15):
+            str_to_send += b',' + random.choice(chunks)
+        send_color_str(str_to_send)
+    else:
+        eprint("Unknown weather event: " + cur_weather)
 
 
 def generate_sun_keys():
@@ -209,28 +271,9 @@ def generate_sun_keys():
     return keyframes
 
 
-def update_priorities():
-    global priorities
-    # TODO remember to add any new event priorities here
-
-    priorities["weather"] = get_weather_priority()
-
-
-def update_event_data():
-    global weather_refresh_t, cur_weather
-    # TODO remember to add any new events here
-    weather_refresh = datetime.timedelta(seconds=20)  # TODO change to 1 hour
-
-    t_since_last_weather = datetime.datetime.today() - weather_refresh_t
-    if t_since_last_weather > weather_refresh:
-        print('Refreshing weather...')
-        cur_weather = fetch_weather_data()
-        weather_refresh_t = datetime.datetime.today()
-
-
 def random_color(from_table: bool = False, bright: bool = False, dim: bool = False):
 
-    if from_table:
+    if from_table:  # TODO add more colors to the table
         color_table = (
             Color(255, 0, 0),
             Color(0, 255, 0),
@@ -269,19 +312,17 @@ def get_weather_priority():
 def fetch_esb_color():
     try:
         res = requests.get("http://www.esbnyc.com/explore/tower-lights/calendar")
-        if res.status_code != 200:
-            raise requests.exceptions.ConnectionError
     except requests.exceptions.RequestException as e:  # This is the correct syntax
-        eprint("unable to connect to www.esbnyc.com: " + res.status_code + '. Stacktrace:')
-        print(e)
+        eprint("unable to connect to www.esbnyc.com. Information: ")
+        eprint('\t' + str(e))
 
     c = res.content
     data = BeautifulSoup(c, "html.parser")
     flavor_str = str(data.find("p", "lighting-desc").string).lstrip("\n ")
     flavor_str = flavor_str.split(" ")
     for s in flavor_str:
-        if s in colors:
-            return Color.from_tuple(colors[s])
+        if s.lower() in colors:
+            return Color.from_tuple(colors[s.lower()])
     return None
 
 
@@ -290,11 +331,9 @@ def fetch_weather_data():
 
     try:
         res = requests.get("https://www.wunderground.com/cgi-bin/findweather/getForecast?query=Whittier+Oaks%2C+NJ")
-        if res.status_code != 200:
-            raise requests.exceptions.ConnectionError
     except requests.exceptions.RequestException as e:  # This is the correct syntax
-        eprint("unable to connect to www.wunderground.com: " + res.status_code + '. Stacktrace:')
-        print(e)
+        eprint("unable to connect to www.wunderground.com. Information: ")
+        eprint('\t' + str(e))
         return None
 
     c = res.content
