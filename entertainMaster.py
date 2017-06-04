@@ -22,13 +22,13 @@
 # (thunderstorm) 10f051,i501,i013,f021,i013,f021,i301,1023,f021,i601
 from __future__ import print_function
 from bs4 import BeautifulSoup
+from collections import deque
 import re
 import sys
 import serial
 import time
 import requests
 import datetime
-import queue
 import threading
 import random
 import math
@@ -103,7 +103,10 @@ sun_colors = {'rise': Color(255, 10, 0), 'mid': Color(255, 255, 255), 'set': Non
 cur_weather = None
 weather_refresh_t = datetime.datetime.today()
 
-priorities = {"sun": 0, "weather": 1}  # 0 - 5. 4 is highest normal prio, 5 is special prio, 0 is default. (-1 is therefore ignored)
+priorities = {"sun": 0, "weather": 1}  # 0 - 5. 4 is highest normal prio, 5 is special prio, 0 is default. (-1 is ignored)
+
+EVENT_THREAD_INTERVAL = 5  # time, in seconds, for the master timer to wait before spawning a new event cycle
+WEATHER_UPDATE_INTERVAL = 15  # minimum time, in seconds, between weather update requests
 
 
 def eprint(*args, **kwargs):
@@ -139,7 +142,7 @@ def init():
     sun_keyframes = generate_sun_keys()
 
     debug_print()
-    cur_weather = 'SNOWING'  # TODO Remove this
+    # cur_weather = 'SNOWING'  # TODO Comment this when not testing weather
     # start decision engine
     master_timer()
 
@@ -147,11 +150,12 @@ def init():
 
 
 def master_timer():
+    global EVENT_THREAD_INTERVAL
     while True:
         t = threading.Thread(target=event_master)
         t.start()
 
-        time.sleep(5)  # TODO change to 30 min
+        time.sleep(EVENT_THREAD_INTERVAL)  # TODO change to 30 min
 
 
 def event_master():
@@ -172,14 +176,14 @@ def update_priorities():
 
 
 def update_event_data():
-    global weather_refresh_t, cur_weather
+    global weather_refresh_t, cur_weather, WEATHER_UPDATE_INTERVAL
     # TODO remember to add any new events here
-    weather_refresh = datetime.timedelta(seconds=5)  # TODO change to 1 hour
+    weather_refresh = datetime.timedelta(seconds=WEATHER_UPDATE_INTERVAL)  # TODO change to minutes
 
     t_since_last_weather = datetime.datetime.today() - weather_refresh_t
     if t_since_last_weather > weather_refresh:
         print('Refreshing weather...')
-        # cur_weather = fetch_weather_data() # TODO Uncomment this
+        cur_weather = fetch_weather_data()  # TODO Uncomment this when not testing weather
         weather_refresh_t = datetime.datetime.today()
 
 
@@ -187,11 +191,24 @@ def sun_event():
     global sun_keyframes, arduino
 
     print('\tFiring sun_event')
-    if not sun_keyframes.empty():
-        color = sun_keyframes.get()
-        send_color_str(color.to_bytes())
-    else:
-        send_color_str(b':000,000,000')
+    if sun_keyframes:
+        color = None
+        # this check allows the sun color to change at a different frequency than the global event update frequency
+        # and the loop allows the sun event to skip events to find the current sun keyframe
+        while True:
+            data = sun_keyframes[0]
+            time_req = data[0]
+            print("Current time:" + str(datetime.datetime.today()) + ". This color's time requirement: " + str(time_req) + ". (" + str(data[1]) + ")")
+            if datetime.datetime.today() >= time_req:
+                sun_keyframes.popleft()
+                color = data[1]
+            else:
+                break
+
+        if color is not None:
+            print("Passed " + str(color))
+            send_color_str(color.to_bytes())
+    # else the queue is empty, do nothing
 
 
 def weather_event():
@@ -222,6 +239,7 @@ def weather_event():
         for _ in range(15):
             str_to_send += b',' + random.choice(chunks)
         send_color_str(str_to_send)
+
     if "snow" in cur_weather.lower():
         # chunks:
         # flash - i0110,f0303
@@ -232,6 +250,7 @@ def weather_event():
         for _ in range(15):
             str_to_send += b',' + random.choice(chunks)
         send_color_str(str_to_send)
+
     else:
         eprint("Unknown weather event: " + cur_weather)
 
@@ -239,9 +258,10 @@ def weather_event():
 def generate_sun_keys():
     global sun_data, sun_colors, esb_color
 
-    keyframes = queue.Queue()
+    keyframes = deque()
     sun_diff = sun_data[1] - sun_data[0]
 
+    # One key per hour from rise until set
     hours_diff = sun_diff.seconds // 3600
     if sun_diff.seconds % 3600 // 60 > 30:  # round up to nearest hour
         hours_diff += 1
@@ -255,8 +275,10 @@ def generate_sun_keys():
     c_diff = c_diff.int_div(rise_key_count - 1)
 
     for a in range(rise_key_count - 1):
-        keyframes.put(sun_colors['rise'] + c_diff.int_mul(a))
-    keyframes.put(sun_colors['mid'])  # manually set last keyframe in order to actually hit the desired end color
+        hour_req = sun_data[0] + datetime.timedelta(hours=a)  # one keyframe per hour, starting at sunrise
+        keyframes.append((hour_req, sun_colors['rise'] + c_diff.int_mul(a)))
+    hour_req = sun_data[0] + datetime.timedelta(hours=rise_key_count - 1)
+    keyframes.append((hour_req, sun_colors['mid']))  # manually set last keyframe in order to actually hit the desired end color
 
     if sun_colors['set'] is None:
         sun_colors['set'] = random_color(dim=True)
@@ -265,8 +287,10 @@ def generate_sun_keys():
     c_diff = c_diff.int_div(set_key_count - 1)
 
     for a in range(set_key_count - 1):
-        keyframes.put(sun_colors['mid'] + c_diff.int_mul(a))
-    keyframes.put(sun_colors['set'])
+        hour_req = sun_data[0] + datetime.timedelta(hours=rise_key_count + a)
+        keyframes.append((hour_req, sun_colors['mid'] + c_diff.int_mul(a)))
+    hour_req = sun_data[0] + datetime.timedelta(hours=rise_key_count + set_key_count - 1)
+    keyframes.append((hour_req, sun_colors['set']))
 
     return keyframes
 
