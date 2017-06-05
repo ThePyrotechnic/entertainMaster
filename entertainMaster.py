@@ -1,3 +1,6 @@
+# The program is expected to be (re)started each day before sunrise
+
+# ARDUINO MESSAGE FORMAT:
 # :RRR,GGG,BBB                             <-- set new color
 # nnXttCC,XttCC,XttCC,XttCC,XttCC,XttCC... <-- program new loop
 #   nn is number of colors in sequence (max 99)
@@ -17,12 +20,15 @@
 #       8   LBL - Light Blue
 #       9   DBL - Dim Blue
 #       10 DWH - Dim White
+#       11 MOV - Movie Orange
 # ex:
 # (purple) :200,000,050
 # (thunderstorm) 10f051,i501,i013,f021,i013,f021,i301,1023,f021,i601
+
 from __future__ import print_function
 from bs4 import BeautifulSoup
 from collections import deque
+from os import path
 import re
 import sys
 import serial
@@ -32,6 +38,7 @@ import datetime
 import threading
 import random
 import math
+import socket
 
 
 class Color:  # convenience class for difference of colors
@@ -91,6 +98,8 @@ class Color:  # convenience class for difference of colors
 # globals TODO describe variable structure
 arduino = None
 bus_lock = threading.Lock()
+interrupt_lock = threading.Lock()
+interrupt_active = False
 colors = {}
 
 esb_color = None
@@ -143,6 +152,10 @@ def init():
 
     debug_print()
     # cur_weather = 'SNOWING'  # TODO Comment this when not testing weather
+
+    # resume interrupts if necessary
+    resume_interrupt()
+
     # start decision engine
     master_timer()
 
@@ -150,10 +163,12 @@ def init():
 
 
 def master_timer():
-    global EVENT_THREAD_INTERVAL
+    global EVENT_THREAD_INTERVAL, interrupt_lock, interrupt_active
     while True:
-        t = threading.Thread(target=event_master)
-        t.start()
+        with interrupt_lock:
+                if not interrupt_active:
+                    t = threading.Thread(target=event_master)
+                    t.start()
 
         time.sleep(EVENT_THREAD_INTERVAL)  # TODO change to 30 min
 
@@ -187,6 +202,67 @@ def update_event_data():
         weather_refresh_t = datetime.datetime.today()
 
 
+def pc_listener():
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind((socket.gethostbyname(socket.gethostname()), 8493))
+    server_socket.listen(5)
+    print("This program's server:port | " + str(socket.gethostbyname(socket.gethostname())) + ':' + '8493')
+
+    while True:
+        (client_socket, address) = server_socket.accept()
+        ct = threading.Thread(target=accept_info, args=[client_socket])
+        ct.run()
+
+
+def accept_info(client_socket):
+    global interrupt_lock, interrupt_active
+    print("Received client message: ")
+
+    msg = client_socket.recv(1)
+    print("\t" + str(msg))
+    fire_interrupt(msg)
+    client_socket.close()
+
+
+def fire_interrupt(signal):
+    global interrupt_lock, interrupt_active
+    # BYTE CODES:
+    # m = movie mode
+    # s = sleep mode (unimplemented)
+    # x = cancel interrupt
+    if signal == b'x':
+        with interrupt_lock:
+            interrupt_active = False
+        open('interrupt.temp', 'w').close()
+        return
+    elif signal == b'm':
+        with interrupt_lock:  # do this inside each interrupt to ensure we only block on a valid interrupt
+            interrupt_active = True
+        send_color_str(b'03f0203,f0206,f0811')
+        time.sleep(2)
+        send_color_str(b'01i0011')
+
+    # saves interrupt state to be resumed if program restarts
+    # (i.e if restarts at midnight during a movie)
+    with open("interrupt.temp", 'wb') as text_file:
+        text_file.write(signal)
+
+
+def resume_interrupt():
+    global interrupt_lock, interrupt_active
+    if path.isfile("interrupt.temp"):
+        with open("interrupt.temp", 'rb') as read_file:
+            signal = read_file.read()
+            if signal == b'x':  # should never happen, but just in case
+                with interrupt_lock:
+                    interrupt_active = False
+                open('interrupt.temp', 'w').close()
+            elif signal == b'm':
+                with interrupt_lock:
+                    interrupt_active = True
+                send_color_str(b'01i0011')  # this is different because if it gets resumed then the program should not re-animate the 'fade-in'
+
+
 def sun_event():
     global sun_keyframes, arduino
 
@@ -195,10 +271,9 @@ def sun_event():
         color = None
         # this check allows the sun color to change at a different frequency than the global event update frequency
         # and the loop allows the sun event to skip events to find the current sun keyframe
-        while True:
+        while sun_keyframes:
             data = sun_keyframes[0]
             time_req = data[0]
-            print("Current time:" + str(datetime.datetime.today()) + ". This color's time requirement: " + str(time_req) + ". (" + str(data[1]) + ")")
             if datetime.datetime.today() >= time_req:
                 sun_keyframes.popleft()
                 color = data[1]
@@ -206,7 +281,6 @@ def sun_event():
                 break
 
         if color is not None:
-            print("Passed " + str(color))
             send_color_str(color.to_bytes())
     # else the queue is empty, do nothing
 
@@ -311,11 +385,10 @@ def random_color(from_table: bool = False, bright: bool = False, dim: bool = Fal
             r_color[random.randint(0, 2)] = 200
         return Color.from_list(r_color)
 
-    r_color = [random.randint(1, 255), random.randint(1, 255), random.randint(1, 255)]
     if dim:
         for a, val in enumerate(r_color):  # make sure no colors are too bright, and turn off one color
             if val > 150:
-                r_color[a] = random.randint(1, 63)
+                r_color[a] = random.randint(1, 63)  # 63 is ~25% brightness
         r_color[random.randint(0, 2)] = 0
     return Color.from_list(r_color)
 
@@ -336,7 +409,7 @@ def get_weather_priority():
 def fetch_esb_color():
     try:
         res = requests.get("http://www.esbnyc.com/explore/tower-lights/calendar")
-    except requests.exceptions.RequestException as e:  # This is the correct syntax
+    except requests.exceptions.RequestException as e:
         eprint("unable to connect to www.esbnyc.com. Information: ")
         eprint('\t' + str(e))
 
@@ -355,7 +428,7 @@ def fetch_weather_data():
 
     try:
         res = requests.get("https://www.wunderground.com/cgi-bin/findweather/getForecast?query=Whittier+Oaks%2C+NJ")
-    except requests.exceptions.RequestException as e:  # This is the correct syntax
+    except requests.exceptions.RequestException as e:
         eprint("unable to connect to www.wunderground.com. Information: ")
         eprint('\t' + str(e))
         return None
@@ -409,5 +482,7 @@ def debug_print():
     print('priorities: ' + str(priorities))
     print('---------------------------')
 
-
-init()
+if __name__ == '__main__':
+    tr = threading.Thread(target=pc_listener)
+    tr.start()
+    init()
