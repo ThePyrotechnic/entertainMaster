@@ -107,6 +107,7 @@ bus_lock = threading.Lock()
 interrupt_lock = threading.Lock()
 interrupt_active = False
 colors = {}
+cur_event = None
 
 esb_color = None
 
@@ -119,7 +120,9 @@ last_sun_color = Color(255, 10, 0)
 cur_weather = None
 weather_refresh_t = datetime.datetime.today()
 
-priorities = {"sun": 0, "weather": 1}  # 0 - 6. 5 is highest normal prio, 6 is special prio, 0 is default. (-1 is ignored)
+cal_event_color_str = None
+
+priorities = {"sun": 0, "weather": 1, "calendar": -1}  # 0 - 6. 5 is highest normal prio, 6 is special prio, 0 is default. (-1 is ignored)
 
 EVENT_THREAD_INTERVAL = 5  # time, in seconds, for the master timer to wait before spawning a new event cycle
 WEATHER_UPDATE_INTERVAL = 15  # minimum time, in seconds, between weather update requests
@@ -156,6 +159,9 @@ def init():
     sun_data = (dat[0], dat[1])
     cur_weather = dat[2]
     sun_keyframes = generate_sun_keys()
+
+    # read holidays.txt for an event
+    parse_calendar_event()
 
     debug_print()
     # cur_weather = 'SNOWING'  # TODO Comment this when not testing weather
@@ -232,7 +238,7 @@ def accept_info(client_socket):
 
 
 def fire_interrupt(signal):
-    global interrupt_lock, interrupt_active
+    global interrupt_lock, interrupt_active, cur_event
     # BYTE CODES:
     # m = movie mode
     # s = sleep mode (unimplemented)
@@ -245,6 +251,7 @@ def fire_interrupt(signal):
     elif signal == b'm':
         with interrupt_lock:  # do this inside each interrupt to ensure we only block on a valid interrupt
             interrupt_active = True
+        cur_event = 'interrupt'
         send_color_str(b'03f0203,f0206,f0811')
         time.sleep(2)
         send_color_str(b'01i0011')
@@ -256,7 +263,7 @@ def fire_interrupt(signal):
 
 
 def resume_interrupt():
-    global interrupt_lock, interrupt_active
+    global interrupt_lock, interrupt_active, cur_event
     if path.isfile("interrupt.temp"):
         with open("interrupt.temp", 'rb') as read_file:
             signal = read_file.read()
@@ -267,11 +274,14 @@ def resume_interrupt():
             elif signal == b'm':
                 with interrupt_lock:
                     interrupt_active = True
+                cur_event = 'interrupt'
                 send_color_str(b'01i0011')  # this is different because if it gets resumed then the program should not re-animate the 'fade-in'
 
 
 def sun_event():
-    global sun_keyframes, arduino, last_sun_color
+    global sun_keyframes, arduino, last_sun_color, cur_event
+
+    cur_event = 'sun'
 
     print('\tFiring sun_event')
     if sun_keyframes:
@@ -296,7 +306,9 @@ def sun_event():
 
 
 def weather_event():
-    global cur_weather
+    global cur_weather, cur_event
+
+    cur_event = 'weather'
 
     print('\tFiring weather_event')
     if "thunder" in cur_weather.lower():
@@ -337,6 +349,14 @@ def weather_event():
 
     else:
         eprint("Unknown weather event: " + cur_weather)
+
+
+def calendar_event():
+    global cal_event_color_str, cur_event
+    print('\tFiring calendar_event')
+    if cur_event != 'calendar':  # don't resend the string needlessly
+        send_color_str(cal_event_color_str)
+        cur_event = 'calendar'
 
 
 def generate_sun_keys():
@@ -473,6 +493,18 @@ def fetch_weather_data():
     return phrase_now
 
 
+def parse_calendar_event():
+    global priorities, cal_event_color_str
+    today = str(datetime.date.today())
+    with open('holidays.txt', 'r', encoding='UTF-8') as read_file:
+        for line in read_file:
+            line = line.split('|')
+            if line[0] == today:
+                cal_event_color_str = bytes(line[2], encoding='ASCII')
+                priorities['calendar'] = int(line[3].rstrip('\n'))
+                return
+
+
 def send_color_str(col_string: bytes):
     global bus_lock, arduino
     print('sending ' + str(col_string))
@@ -481,13 +513,14 @@ def send_color_str(col_string: bytes):
 
 
 def debug_print():
-    global esb_color, sun_data, sun_keyframes, is_init, sun_colors, cur_weather, weather_refresh_t, priorities
+    global esb_color, sun_data, sun_keyframes, is_init, sun_colors, cur_weather, weather_refresh_t, priorities, cal_event_color_str
     print('------DEBUG OUT------')
     print('esb_color: ' + str(esb_color))
     print('sun_data[0] (sunrise): ' + str(sun_data[0]))
     print('sun_data[1] (sunset): ' + str(sun_data[1]))
     print('sun_keyframes: ' + str(sun_keyframes))
     print('sun_colors[\'set\']: ' + str(sun_colors['set']))
+    print('cal_event_color_str: ' + str(cal_event_color_str))
     print('cur_weather: ' + cur_weather + '(is_init: ' + str(is_init) + ')')
     print('weather_refresh_t: ' + str(weather_refresh_t))
     print('priorities: ' + str(priorities))
