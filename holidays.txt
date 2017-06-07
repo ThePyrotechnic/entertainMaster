@@ -1,201 +1,201 @@
-2017-06-06|D-Day|:000,000,000|0
-2017-06-08|World Oceans Day|:000,000,000|0
-2017-06-11|Trinity Sunday|:000,000,000|0
-2017-06-11|Kamehameha Day|:000,000,000|0
-2017-06-12|World Day Against Child Labour|:000,000,000|0
-2017-06-12|Kamehameha Day observed|:000,000,000|0
-2017-06-13|International Albinism Awareness Day|:000,000,000|0
-2017-06-14|World Blood Donor Day|:000,000,000|0
+2017-06-06|D-Day|:000,000,000|-1
+2017-06-08|World Oceans Day|:000,000,000|-1
+2017-06-11|Trinity Sunday|:000,000,000|-1
+2017-06-11|Kamehameha Day|:000,000,000|-1
+2017-06-12|World Day Against Child Labour|:000,000,000|-1
+2017-06-12|Kamehameha Day observed|:000,000,000|-1
+2017-06-13|International Albinism Awareness Day|:000,000,000|-1
+2017-06-14|World Blood Donor Day|:000,000,000|-1
 2017-06-14|Army Birthday|04f0406,i5006,f0407,i5007|5
 2017-06-14|Flag Day|06f1000,i5000,f1003,i5003,f1001,i5001|4
-2017-06-15|Corpus Christi|:000,000,000|0
-2017-06-15|World Elder Abuse Awareness Day|:000,000,000|0
-2017-06-16|International Day of Family Remittances|:000,000,000|0
-2017-06-16|Bunker Hill Day observed|:000,000,000|0
-2017-06-17|World Day to Combat Desertification and Drought|:000,000,000|0
-2017-06-17|Bunker Hill Day|:000,000,000|0
-2017-06-18|Father's Day|:000,000,000|0
-2017-06-19|International Day for the Elimination of Sexual Violence in Conflict|:000,000,000|0
-2017-06-19|Juneteenth|:000,000,000|0
-2017-06-19|Emancipation Day|:000,000,000|0
-2017-06-20|World Refugee Day|:000,000,000|0
-2017-06-20|West Virginia Day|:000,000,000|0
-2017-06-20|American Eagle Day|:000,000,000|0
-2017-06-21|Lailat al-Qadr|:000,000,000|0
-2017-06-21|June Solstice|:000,000,000|0
-2017-06-21|International Day of Yoga|:000,000,000|0
-2017-06-23|Public Service Day|:000,000,000|0
-2017-06-23|International Widows' Day|:000,000,000|0
-2017-06-25|Day of the Seafarer|:000,000,000|0
-2017-06-26|Eid al-Fitr|:000,000,000|0
-2017-06-26|International Day Against Drug Abuse and Illicit Trafficking|:000,000,000|0
-2017-06-26|International Day in Support of Victims of Torture|:000,000,000|0
-2017-06-30|International Asteroid Day|:000,000,000|0
-2017-07-01|International Day of Cooperatives|:000,000,000|0
+2017-06-15|Corpus Christi|:000,000,000|-1
+2017-06-15|World Elder Abuse Awareness Day|:000,000,000|-1
+2017-06-16|International Day of Family Remittances|:000,000,000|-1
+2017-06-16|Bunker Hill Day observed|:000,000,000|-1
+2017-06-17|World Day to Combat Desertification and Drought|:000,000,000|-1
+2017-06-17|Bunker Hill Day|:000,000,000|-1
+2017-06-18|Father's Day|:000,000,000|-1
+2017-06-19|International Day for the Elimination of Sexual Violence in Conflict|:000,000,000|-1
+2017-06-19|Juneteenth|:000,000,000|-1
+2017-06-19|Emancipation Day|:000,000,000|-1
+2017-06-20|World Refugee Day|:000,000,000|-1
+2017-06-20|West Virginia Day|:000,000,000|-1
+2017-06-20|American Eagle Day|:000,000,000|-1
+2017-06-21|Lailat al-Qadr|:000,000,000|-1
+2017-06-21|June Solstice|:000,000,000|-1
+2017-06-21|International Day of Yoga|:000,000,000|-1
+2017-06-23|Public Service Day|:000,000,000|-1
+2017-06-23|International Widows' Day|:000,000,000|-1
+2017-06-25|Day of the Seafarer|:000,000,000|-1
+2017-06-26|Eid al-Fitr|:000,000,000|-1
+2017-06-26|International Day Against Drug Abuse and Illicit Trafficking|:000,000,000|-1
+2017-06-26|International Day in Support of Victims of Torture|:000,000,000|-1
+2017-06-30|International Asteroid Day|:000,000,000|-1
+2017-07-01|International Day of Cooperatives|:000,000,000|-1
 2017-07-04|Independence Day|06f1000,i5000,f1003,i5003,f1001,i5001|3
-2017-07-11|World Population Day|:000,000,000|0
-2017-07-15|World Youth Skills Day|:000,000,000|0
-2017-07-18|Nelson Mandela Day|:000,000,000|0
-2017-07-23|Parents' Day|:000,000,000|0
-2017-07-24|Pioneer Day|:000,000,000|0
-2017-07-27|National Korean War Veterans Armistice Day|:000,000,000|0
-2017-07-28|World Hepatitis Day|:000,000,000|0
-2017-07-30|International Day of Friendship|:000,000,000|0
-2017-07-30|World Day against Trafficking in Persons|:000,000,000|0
-2017-08-01|Tisha B'Av|:000,000,000|0
-2017-08-01|Colorado Day|:000,000,000|0
-2017-08-04|Coast Guard Birthday|:000,000,000|0
-2017-08-07|Raksha Bandhan|:000,000,000|0
+2017-07-11|World Population Day|:000,000,000|-1
+2017-07-15|World Youth Skills Day|:000,000,000|-1
+2017-07-18|Nelson Mandela Day|:000,000,000|-1
+2017-07-23|Parents' Day|:000,000,000|-1
+2017-07-24|Pioneer Day|:000,000,000|-1
+2017-07-27|National Korean War Veterans Armistice Day|:000,000,000|-1
+2017-07-28|World Hepatitis Day|:000,000,000|-1
+2017-07-30|International Day of Friendship|:000,000,000|-1
+2017-07-30|World Day against Trafficking in Persons|:000,000,000|-1
+2017-08-01|Tisha B'Av|:000,000,000|-1
+2017-08-01|Colorado Day|:000,000,000|-1
+2017-08-04|Coast Guard Birthday|:000,000,000|-1
+2017-08-07|Raksha Bandhan|:000,000,000|-1
 2017-08-07|Purple Heart Day|05i0004,f0212,f0304,i5004,i5004|4
-2017-08-09|International Day of the World's Indigenous People|:000,000,000|0
-2017-08-12|International Youth Day|:000,000,000|0
-2017-08-14|Janmashtami|:000,000,000|0
-2017-08-14|Victory Day|:000,000,000|0
-2017-08-15|Assumption of Mary|:000,000,000|0
-2017-08-16|Bennington Battle Day|:000,000,000|0
-2017-08-18|Statehood Day in Hawaii|:000,000,000|0
-2017-08-19|World Humanitarian Day|:000,000,000|0
-2017-08-19|National Aviation Day|:000,000,000|0
-2017-08-21|Senior Citizens Day|:000,000,000|0
-2017-08-23|International Day for the Remembrance of the Slave Trade and its Abolition|:000,000,000|0
-2017-08-24|Ganesh Chaturthi|:000,000,000|0
+2017-08-09|International Day of the World's Indigenous People|:000,000,000|-1
+2017-08-12|International Youth Day|:000,000,000|-1
+2017-08-14|Janmashtami|:000,000,000|-1
+2017-08-14|Victory Day|:000,000,000|-1
+2017-08-15|Assumption of Mary|:000,000,000|-1
+2017-08-16|Bennington Battle Day|:000,000,000|-1
+2017-08-18|Statehood Day in Hawaii|:000,000,000|-1
+2017-08-19|World Humanitarian Day|:000,000,000|-1
+2017-08-19|National Aviation Day|:000,000,000|-1
+2017-08-21|Senior Citizens Day|:000,000,000|-1
+2017-08-23|International Day for the Remembrance of the Slave Trade and its Abolition|:000,000,000|-1
+2017-08-24|Ganesh Chaturthi|:000,000,000|-1
 2017-08-26|Women's Equality Day|02f1001,f2005|4
-2017-08-27|Lyndon Baines Johnson Day|:000,000,000|0
-2017-08-29|International Day against Nuclear Tests|:000,000,000|0
-2017-08-30|International Day of the Victims of Enforced Disappearances|:000,000,000|0
-2017-08-31|International Overdose Awareness Day|:000,000,000|0
-2017-09-02|Eid al-Adha|:000,000,000|0
-2017-09-04|World Sexual Health Day|:000,000,000|0
-2017-09-04|Labor Day|:000,000,000|0
-2017-09-05|International Day of Charity|:000,000,000|0
-2017-09-08|International Literacy Day|:000,000,000|0
-2017-09-09|Carl Garner Federal Lands Cleanup Day|:000,000,000|0
-2017-09-09|California Admission Day|:000,000,000|0
-2017-09-10|World Suicide Prevention Day|:000,000,000|0
-2017-09-10|National Grandparents Day|:000,000,000|0
-2017-09-11|Patriot Day|06f1000,i5000,f1003,i5003,f1001,i5001|0
-2017-09-12|International Day for South-South Cooperation|:000,000,000|0
+2017-08-27|Lyndon Baines Johnson Day|:000,000,000|-1
+2017-08-29|International Day against Nuclear Tests|:000,000,000|-1
+2017-08-30|International Day of the Victims of Enforced Disappearances|:000,000,000|-1
+2017-08-31|International Overdose Awareness Day|:000,000,000|-1
+2017-09-02|Eid al-Adha|:000,000,000|-1
+2017-09-04|World Sexual Health Day|:000,000,000|-1
+2017-09-04|Labor Day|:000,000,000|-1
+2017-09-05|International Day of Charity|:000,000,000|-1
+2017-09-08|International Literacy Day|:000,000,000|-1
+2017-09-09|Carl Garner Federal Lands Cleanup Day|:000,000,000|-1
+2017-09-09|California Admission Day|:000,000,000|-1
+2017-09-10|World Suicide Prevention Day|:000,000,000|-1
+2017-09-10|National Grandparents Day|:000,000,000|-1
+2017-09-11|Patriot Day|06f1000,i5000,f1003,i5003,f1001,i5001|3
+2017-09-12|International Day for South-South Cooperation|:000,000,000|-1
 2017-09-13|International Programmers' Day|33i0113,i0107,i0113,i0107,i0313,i0107,i0313,i0107,i0313,i0107,i0607,i0113,i0107,i0113,i0107,i0113,i0107,i0113,i0107,i0113,i0107,i0607,i0313,i0107,i0113,i0107,i0113,i0107,i0113,i0107,i0113,i0107,i1407|6
-2017-09-15|International Day of Democracy|:000,000,000|0
-2017-09-15|National POW/MIA Recognition Day|:000,000,000|0
-2017-09-16|International Day for the Preservation of the Ozone Layer|:000,000,000|0
-2017-09-17|Constitution Day and Citizenship Day|06f1000,i5000,f1003,i5003,f1001,i5001|0
-2017-09-18|Air Force Birthday|:000,000,000|0
-2017-09-18|Constitution Day and Citizenship Day observed|:000,000,000|0
-2017-09-20|Navaratri|:000,000,000|0
-2017-09-21|Rosh Hashana|:000,000,000|0
-2017-09-21|Rosh Hashana|:000,000,000|0
+2017-09-15|International Day of Democracy|:000,000,000|-1
+2017-09-15|National POW/MIA Recognition Day|:000,000,000|-1
+2017-09-16|International Day for the Preservation of the Ozone Layer|:000,000,000|-1
+2017-09-17|Constitution Day and Citizenship Day|06f1000,i5000,f1003,i5003,f1001,i5001|3
+2017-09-18|Air Force Birthday|:000,000,000|-1
+2017-09-18|Constitution Day and Citizenship Day observed|:000,000,000|-1
+2017-09-20|Navaratri|:000,000,000|-1
+2017-09-21|Rosh Hashana|:000,000,000|-1
+2017-09-21|Rosh Hashana|:000,000,000|-1
 2017-09-21|International Day of Peace|02f1008,f1003|4
-2017-09-22|Muharram|:000,000,000|0
-2017-09-22|September equinox|:000,000,000|0
-2017-09-22|Emancipation Day|:000,000,000|0
-2017-09-22|Native Americans' Day|:000,000,000|0
-2017-09-23|International Celebrate Bisexuality Day|:000,000,000|0
-2017-09-24|Gold Star Mother's Day|:000,000,000|0
-2017-09-26|International Day for the Total Elimination of Nuclear Weapons|:000,000,000|0
-2017-09-27|World Tourism Day|:000,000,000|0
-2017-09-28|World Maritime Day|:000,000,000|0
-2017-09-28|World Rabies Day|:000,000,000|0
-2017-09-29|World Heart Day|:000,000,000|0
-2017-09-30|Yom Kippur|:000,000,000|0
-2017-09-30|Dussehra|:000,000,000|0
-2017-09-30|Yom Kippur|:000,000,000|0
-2017-10-01|International Day of Older Persons|:000,000,000|0
-2017-10-01|World Vegetarian Day|:000,000,000|0
-2017-10-02|World Habitat Day|:000,000,000|0
-2017-10-02|International Day of Non-Violence|:000,000,000|0
-2017-10-02|Child Health Day|:000,000,000|0
-2017-10-04|Feast of St Francis of Assisi|:000,000,000|0
-2017-10-04|World Cerebral Palsy Day|:000,000,000|0
-2017-10-05|First Day of Sukkot|:000,000,000|0
-2017-10-05|World Teachers' Day|:000,000,000|0
-2017-10-09|World Post Day|:000,000,000|0
+2017-09-22|Muharram|:000,000,000|-1
+2017-09-22|September equinox|:000,000,000|-1
+2017-09-22|Emancipation Day|:000,000,000|-1
+2017-09-22|Native Americans' Day|:000,000,000|-1
+2017-09-23|International Celebrate Bisexuality Day|:000,000,000|-1
+2017-09-24|Gold Star Mother's Day|:000,000,000|-1
+2017-09-26|International Day for the Total Elimination of Nuclear Weapons|:000,000,000|-1
+2017-09-27|World Tourism Day|:000,000,000|-1
+2017-09-28|World Maritime Day|:000,000,000|-1
+2017-09-28|World Rabies Day|:000,000,000|-1
+2017-09-29|World Heart Day|:000,000,000|-1
+2017-09-30|Yom Kippur|:000,000,000|-1
+2017-09-30|Dussehra|:000,000,000|-1
+2017-09-30|Yom Kippur|:000,000,000|-1
+2017-10-01|International Day of Older Persons|:000,000,000|-1
+2017-10-01|World Vegetarian Day|:000,000,000|-1
+2017-10-02|World Habitat Day|:000,000,000|-1
+2017-10-02|International Day of Non-Violence|:000,000,000|-1
+2017-10-02|Child Health Day|:000,000,000|-1
+2017-10-04|Feast of St Francis of Assisi|:000,000,000|-1
+2017-10-04|World Cerebral Palsy Day|:000,000,000|-1
+2017-10-05|First Day of Sukkot|:000,000,000|-1
+2017-10-05|World Teachers' Day|:000,000,000|-1
+2017-10-09|World Post Day|:000,000,000|-1
 2017-10-09|Leif Erikson Day|06f1014,i9914,f1000,i5000,f1015,i9915|5
 2017-10-09|Columbus Day|06f1000,i5000,f1003,i5003,f1001,i5001|4
-2017-10-09|Native Americans' Day|:000,000,000|0
-2017-10-09|Indigenous People's Day|:000,000,000|0
-2017-10-09|Indigenous People's Day|:000,000,000|0
-2017-10-10|World Mental Health Day|:000,000,000|0
-2017-10-11|Last Day of Sukkot|:000,000,000|0
-2017-10-11|International Day for Natural Disaster Reduction|:000,000,000|0
-2017-10-11|International Day of the Girl Child|:000,000,000|0
-2017-10-12|Shmini Atzeret|:000,000,000|0
-2017-10-12|World Sight Day|:000,000,000|0
-2017-10-13|Simchat Torah|:000,000,000|0
+2017-10-09|Native Americans' Day|:000,000,000|-1
+2017-10-09|Indigenous People's Day|:000,000,000|-1
+2017-10-09|Indigenous People's Day|:000,000,000|-1
+2017-10-10|World Mental Health Day|:000,000,000|-1
+2017-10-11|Last Day of Sukkot|:000,000,000|-1
+2017-10-11|International Day for Natural Disaster Reduction|:000,000,000|-1
+2017-10-11|International Day of the Girl Child|:000,000,000|-1
+2017-10-12|Shmini Atzeret|:000,000,000|-1
+2017-10-12|World Sight Day|:000,000,000|-1
+2017-10-13|Simchat Torah|:000,000,000|-1
 2017-10-13|Friday the 13th|10f0500,i5000,i0116,f0200,i0116,f0200,i3000,10216,f0200,i5000|5
-2017-10-13|Navy Birthday|:000,000,000|0
-2017-10-15|International Day of Rural Women|:000,000,000|0
-2017-10-15|White Cane Safety Day|:000,000,000|0
-2017-10-16|World Food Day|:000,000,000|0
-2017-10-16|Boss's Day|:000,000,000|0
-2017-10-17|International Day for the Eradication of Poverty|:000,000,000|0
-2017-10-18|Alaska Day|:000,000,000|0
-2017-10-18|Diwali/Deepavali|:000,000,000|0
-2017-10-24|United Nations Day|:000,000,000|0
-2017-10-24|World Development Information Day|:000,000,000|0
-2017-10-27|World Day for Audiovisual Heritage|:000,000,000|0
-2017-10-27|Nevada Day|:000,000,000|0
-2017-10-29|World Stroke Day|:000,000,000|0
-2017-10-31|World Cities Day|:000,000,000|0
+2017-10-13|Navy Birthday|:000,000,000|-1
+2017-10-15|International Day of Rural Women|:000,000,000|-1
+2017-10-15|White Cane Safety Day|:000,000,000|-1
+2017-10-16|World Food Day|:000,000,000|-1
+2017-10-16|Boss's Day|:000,000,000|-1
+2017-10-17|International Day for the Eradication of Poverty|:000,000,000|-1
+2017-10-18|Alaska Day|:000,000,000|-1
+2017-10-18|Diwali/Deepavali|:000,000,000|-1
+2017-10-24|United Nations Day|:000,000,000|-1
+2017-10-24|World Development Information Day|:000,000,000|-1
+2017-10-27|World Day for Audiovisual Heritage|:000,000,000|-1
+2017-10-27|Nevada Day|:000,000,000|-1
+2017-10-29|World Stroke Day|:000,000,000|-1
+2017-10-31|World Cities Day|:000,000,000|-1
 2017-10-31|Halloween|04f1006,i5006,f1011,i5011|5
-2017-11-01|All Saints' Day|:000,000,000|0
-2017-11-01|World Vegan Day|:000,000,000|0
-2017-11-02|All Souls' Day|:000,000,000|0
-2017-11-02|International Day to End Impunity for Crimes against Journalists|:000,000,000|0
-2017-11-05|Daylight Saving Time ends|:000,000,000|0
-2017-11-06|International Day for Preventing the Exploitation of the Environment in War and Armed Conflict|:000,000,000|0
+2017-11-01|All Saints' Day|:000,000,000|-1
+2017-11-01|World Vegan Day|:000,000,000|-1
+2017-11-02|All Souls' Day|:000,000,000|-1
+2017-11-02|International Day to End Impunity for Crimes against Journalists|:000,000,000|-1
+2017-11-05|Daylight Saving Time ends|:000,000,000|-1
+2017-11-06|International Day for Preventing the Exploitation of the Environment in War and Armed Conflict|:000,000,000|-1
 2017-11-07|Election Day|06f1000,i5000,f1003,i5003,f1001,i5001|3
-2017-11-10|World Science Day for Peace and Development|:000,000,000|0
-2017-11-10|Marine Corps Birthday|:000,000,000|0
-2017-11-10|Veterans Day (observed)|:000,000,000|0
-2017-11-11|Veterans Day|06f1000,i5000,f1003,i5003,f1001,i5001|0
-2017-11-12|World Pneumonia Day|:000,000,000|0
+2017-11-10|World Science Day for Peace and Development|:000,000,000|-1
+2017-11-10|Marine Corps Birthday|:000,000,000|-1
+2017-11-10|Veterans Day (observed)|:000,000,000|-1
+2017-11-11|Veterans Day|06f1000,i5000,f1003,i5003,f1001,i5001|5
+2017-11-12|World Pneumonia Day|:000,000,000|-1
 2017-11-14|World Diabetes Day|06i0117,f0209,f0317,f0209,f0317,i9917|6
-2017-11-16|International Day for Tolerance|:000,000,000|0
-2017-11-16|World Philosophy Day|:000,000,000|0
-2017-11-17|World Prematurity Day|:000,000,000|0
-2017-11-19|World Day of Remembrance for Road Traffic Victims|:000,000,000|0
-2017-11-19|World Toilet Day|:000,000,000|0
-2017-11-19|International Men's Day|:000,000,000|0
-2017-11-20|Universal Children's Day|:000,000,000|0
-2017-11-20|Africa Industrialization Day|:000,000,000|0
-2017-11-21|World Television Day|:000,000,000|0
+2017-11-16|International Day for Tolerance|:000,000,000|-1
+2017-11-16|World Philosophy Day|:000,000,000|-1
+2017-11-17|World Prematurity Day|:000,000,000|-1
+2017-11-19|World Day of Remembrance for Road Traffic Victims|:000,000,000|-1
+2017-11-19|World Toilet Day|:000,000,000|-1
+2017-11-19|International Men's Day|:000,000,000|-1
+2017-11-20|Universal Children's Day|:000,000,000|-1
+2017-11-20|Africa Industrialization Day|:000,000,000|-1
+2017-11-21|World Television Day|:000,000,000|-1
 2017-11-23|Thanksgiving Day|06f1006,i5006,i5006,i5006,i5006,f1011|5
-2017-11-24|State Holiday|:000,000,000|0
+2017-11-24|State Holiday|:000,000,000|-1
 2017-11-24|Presidents' Day|06f1000,i5000,f1003,i5003,f1001,i5001|4
 2017-11-24|Lincoln's Birthday/Lincoln's Day|06f1000,i5000,f1003,i5003,f1001,i5001|3
-2017-11-24|Black Friday|:000,000,000|0
-2017-11-24|American Indian Heritage Day|:000,000,000|0
-2017-11-25|International Day for the Elimination of Violence against Women|:000,000,000|0
+2017-11-24|Black Friday|:000,000,000|-1
+2017-11-24|American Indian Heritage Day|:000,000,000|-1
+2017-11-25|International Day for the Elimination of Violence against Women|:000,000,000|-1
 2017-11-27|Cyber Monday|05i0013,f1507,f1513,i5013,i5013|4
-2017-11-29|International Day of Solidarity with the Palestinian People|:000,000,000|0
-2017-12-01|The Prophet's Birthday|:000,000,000|0
-2017-12-01|World AIDS Day|:000,000,000|0
-2017-12-02|International Day for the Abolition of Slavery|:000,000,000|0
-2017-12-03|First Sunday of Advent|:000,000,000|0
-2017-12-03|International Day of Persons with Disabilities|:000,000,000|0
-2017-12-05|International Volunteer Day for Economic and Social Development|:000,000,000|0
-2017-12-05|World Soil Day|:000,000,000|0
-2017-12-06|St Nicholas' Day|:000,000,000|0
-2017-12-07|International Civil Aviation Day|:000,000,000|0
+2017-11-29|International Day of Solidarity with the Palestinian People|:000,000,000|-1
+2017-12-01|The Prophet's Birthday|:000,000,000|-1
+2017-12-01|World AIDS Day|:000,000,000|-1
+2017-12-02|International Day for the Abolition of Slavery|:000,000,000|-1
+2017-12-03|First Sunday of Advent|:000,000,000|-1
+2017-12-03|International Day of Persons with Disabilities|:000,000,000|-1
+2017-12-05|International Volunteer Day for Economic and Social Development|:000,000,000|-1
+2017-12-05|World Soil Day|:000,000,000|-1
+2017-12-06|St Nicholas' Day|:000,000,000|-1
+2017-12-07|International Civil Aviation Day|:000,000,000|-1
 2017-12-07|Pearl Harbor Remembrance Day|10f0201,i0501,f0203,f0201,i0501,f0203,f0800,i1500,f0803,i1503|4
-2017-12-08|Feast of the Immaculate Conception|:000,000,000|0
-2017-12-09|International Anti-Corruption Day|:000,000,000|0
-2017-12-09|World Genocide Commemoration Day|:000,000,000|0
-2017-12-10|Human Rights Day|:000,000,000|0
-2017-12-11|International Mountain Day|:000,000,000|0
-2017-12-12|Feast of Our Lady of Guadalupe|:000,000,000|0
+2017-12-08|Feast of the Immaculate Conception|:000,000,000|-1
+2017-12-09|International Anti-Corruption Day|:000,000,000|-1
+2017-12-09|World Genocide Commemoration Day|:000,000,000|-1
+2017-12-10|Human Rights Day|:000,000,000|-1
+2017-12-11|International Mountain Day|:000,000,000|-1
+2017-12-12|Feast of Our Lady of Guadalupe|:000,000,000|-1
 2017-12-13|Chanukah/Hanukkah (first day)|02f1215,f1201|4
-2017-12-13|National Guard Birthday|:000,000,000|0
-2017-12-17|Pan American Aviation Day|:000,000,000|0
-2017-12-17|Wright Brothers Day|:000,000,000|0
-2017-12-18|International Migrants Day|:000,000,000|0
-2017-12-18|Arabic Language Day|:000,000,000|0
+2017-12-13|National Guard Birthday|:000,000,000|-1
+2017-12-17|Pan American Aviation Day|:000,000,000|-1
+2017-12-17|Wright Brothers Day|:000,000,000|-1
+2017-12-18|International Migrants Day|:000,000,000|-1
+2017-12-18|Arabic Language Day|:000,000,000|-1
 2017-12-20|Last Day of Chanukah|02f1215,f1201|4
-2017-12-20|International Human Solidarity Day|:000,000,000|0
-2017-12-21|December Solstice|:000,000,000|0
+2017-12-20|International Human Solidarity Day|:000,000,000|-1
+2017-12-21|December Solstice|:000,000,000|-1
 2017-12-24|Christmas Eve|06f4000,f1207,i5007,f4002,f1207,i5007|4
 2017-12-25|Christmas Day|22f4000,f4007,f4002,f4007,f4000,f4007,f4002,f4007,f4000,f4007,f4002,f4007,f4000,f4007,f4002,f4007,i1000,i1002,i1000,i1002,i1000,i1002|6
-2017-12-26|Kwanzaa (until Jan 1)|:000,000,000|0
-2017-12-31|New Year's Eve|:000,000,000|0
-2017-12-31|New Year's Eve|:000,000,000|0
+2017-12-26|Kwanzaa (until Jan 1)|:000,000,000|-1
+2017-12-31|New Year's Eve|:000,000,000|-1
+2017-12-31|New Year's Eve|:000,000,000|-1
