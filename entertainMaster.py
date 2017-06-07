@@ -33,7 +33,7 @@
 
 from __future__ import print_function
 
-from collections import deque, namedtuple
+from collections import deque
 import datetime
 import math
 from os import path
@@ -47,6 +47,8 @@ import time
 from bs4 import BeautifulSoup
 import requests
 import serial
+import tweepy
+from tweepy import OAuthHandler
 
 
 class Color:
@@ -130,7 +132,14 @@ weather_refresh_t = datetime.datetime.today()
 
 cal_event_color_str = None
 
-priorities = {"sun": 0, "weather": 1, "calendar": -1}  # 0 - 6. 5 is highest normal prio, 6 is special prio, 0 is default. (-1 is ignored)
+rangers_won = False
+steelers_won = False
+
+DJI_difference = None
+not_fetched_stocks = True
+stocks_color_str = None
+
+priorities = {"sun": 0, "weather": -1, "calendar": -1, "sports": -1, "stocks": -1}  # 0 - 6. 5 is highest normal prio, 6 is special prio, 0 is default. (-1 is ignored)
 
 EVENT_THREAD_INTERVAL = 5  # time, in seconds, for the master timer to wait before spawning a new event cycle
 WEATHER_UPDATE_INTERVAL = 15  # minimum time, in seconds, between weather update requests
@@ -174,11 +183,15 @@ def init():
     # read holidays.txt for an event
     parse_calendar_event()
 
-    debug_print()
-    # cur_weather = 'SNOWING'  # TODO Comment this when not testing weather
+    # read tweets for sports information
+    crawl_twitter_accounts()
 
     # resume interrupts if necessary
     resume_interrupt()
+
+    # cur_weather = 'SNOWING'  # TODO Comment this when not testing weather
+
+    debug_print()
 
     # start decision engine
     master_timer()
@@ -191,7 +204,7 @@ def master_timer():
     while True:
         with interrupt_lock:
                 if not interrupt_active:
-                    t = threading.Thread(target=event_master)
+                    t = threading.Thread(target=event_master)  # Place a breakpoint here to manually allow threads through while debugging
                     t.start()
 
         time.sleep(EVENT_THREAD_INTERVAL)  # TODO change to 30 min
@@ -209,21 +222,28 @@ def event_master():
 
 def update_priorities():
     global priorities
-    # TODO remember to add any new event priorities here
+    # TODO remember to add any changing event priorities here
 
     priorities["weather"] = get_weather_priority()
 
 
 def update_event_data():
-    global weather_refresh_t, cur_weather, WEATHER_UPDATE_INTERVAL
+    global weather_refresh_t, cur_weather, not_fetched_stocks, WEATHER_UPDATE_INTERVAL
     # TODO remember to add any new events here
     weather_refresh = datetime.timedelta(seconds=WEATHER_UPDATE_INTERVAL)  # TODO change to minutes
 
-    t_since_last_weather = datetime.datetime.today() - weather_refresh_t
+    today = datetime.datetime.today()
+
+    t_since_last_weather = today - weather_refresh_t
     if t_since_last_weather > weather_refresh:
         print('Refreshing weather...')
         cur_weather = fetch_weather_data()  # TODO Uncomment this when not testing weather
         weather_refresh_t = datetime.datetime.today()
+
+    # check Dow Jones after NASDAQ closes at 4:00PM
+    if not_fetched_stocks and today.hour >= 15:
+        fetch_stock_data()
+        not_fetched_stocks = False  # only fetch once
 
 
 def pc_listener():
@@ -365,9 +385,41 @@ def weather_event():
 def calendar_event():
     global cal_event_color_str, cur_event
     print('\tFiring calendar_event')
+
     if cur_event != 'calendar':  # don't resend the string needlessly
         send_color_str(cal_event_color_str)
         cur_event = 'calendar'
+
+
+def sports_event():
+    global rangers_won, steelers_won
+    print('\tFiring sports_event')
+
+    # ordered by preference. This list is read left to right so that if multiple teams win, the preferred team is chosen
+    # TODO make this a global so it can be modified in UI if desired
+    team_prio = {'rangers': rangers_won, 'steelers': steelers_won}
+
+    team = None
+    for t in team_prio:
+        if team_prio[t]:
+            team = t
+
+    if team == 'rangers':
+        send_color_str(b'04f1000,i5000,f1001,i5001')
+    elif team == 'steelers':
+        send_color_str(b'04f1015,i5015,f0207,i5007')
+    else:
+        eprint("Sports event chosen, but no team won a game last night")
+
+
+def stocks_event():
+    global stocks_color_str
+    print('\tFiring stocks_event')
+
+    if stocks_color_str is not None:
+        send_color_str(stocks_color_str)
+    else:
+        eprint("Stocks event chosen, but there is no stock color set")
 
 
 def generate_sun_keys():
@@ -518,6 +570,66 @@ def parse_calendar_event():
                 return
 
 
+def crawl_twitter_accounts():
+    global priorities, rangers_won, steelers_won
+
+    consumer_key = "8jQgMroN3l5lOgZ4gg8PY6PsD"
+    consumer_secret = "ZmpFmplX3qXdIQyFdMXeS61o4kHMGPFXw3lEwkGIODwYW34mZf"
+    access_token = "1352886691-FeCAGFBWbt3ns4vkz1792IpBt0htAZqAV31VX0C"
+    access_secret = "h3Vx59GPYVEgKm4jla9pHEGpSoWJLNHsCpqLMsbC4angu"
+
+    auth = OAuthHandler(consumer_key, consumer_secret)
+    auth.set_access_token(access_token, access_secret)
+
+    api = tweepy.API(auth, timeout=5)
+    rangers_tweet = steelers_tweet = None
+    try:
+        steelers_tweet = api.user_timeline('DidSteelersWin', count=1)[0].text[:3].rstrip(',')
+    except tweepy.error.TweepError as e:
+        eprint('Failed to connect to Steelers\' Twitter. error: \n\t' + str(e))
+
+    try:
+        rangers_tweet = api.user_timeline('DidRangersWin', count=1)[0].text[:3].rstrip(',')
+    except tweepy.error.TweepError as e:
+        eprint('Failed to connect to Rangers\' Twitter. error: \n\t' + str(e))
+
+    if rangers_tweet.lower() == 'yes':
+        rangers_won = True
+        priorities['sports'] = 3
+
+    if steelers_tweet.lower() == 'yes':
+        steelers_won = True
+        priorities['sports'] = 3
+
+
+def fetch_stock_data():
+    global priorities, DJI_difference, stocks_color_str
+
+    try:
+        res = requests.get("https://www.google.com/finance?q=INDEXDJX:.DJI")
+    except requests.exceptions.RequestException as e:
+        eprint("unable to connect to Google Finance. Information: ")
+        eprint('\t' + str(e))
+
+    c = res.content
+    data = BeautifulSoup(c, "html.parser")
+    stock_diff = str(data.find("span", id="ref_983582_c").string)
+    DJI_difference = float(stock_diff)
+
+    if 200.0 <= DJI_difference < 300:
+        stocks_color_str = b'03f1002,i9902,f0507'  # single pulse
+        priorities['stocks'] = 2
+    elif DJI_difference >= 300:
+        stocks_color_str = b'05f1002,i9902,f0507,f0502,f0507'  # double pulse
+        priorities['stocks'] = 3
+    elif -300.0 < DJI_difference < -150:
+        stocks_color_str = b'03f1000,i9900,f0507'
+        priorities['stocks'] = 2
+    elif DJI_difference <= -300:
+        stocks_color_str = b'05f1000,i9900,f0507,f0500,f0507'
+        priorities['stocks'] = 3
+
+
 def send_color_str(col_string: bytes):
     global bus_lock, arduino
     print('sending', col_string)
@@ -526,7 +638,8 @@ def send_color_str(col_string: bytes):
 
 
 def debug_print():
-    global esb_color, sun_data, sun_keyframes, is_init, sun_colors, cur_weather, weather_refresh_t, priorities, cal_event_color_str
+    global esb_color, sun_data, sun_keyframes, is_init, sun_colors, cur_weather, weather_refresh_t, priorities, cal_event_color_str, \
+        DJI_difference, stocks_color_str, steelers_won, rangers_won
     print('------DEBUG OUT------')
     print('esb_color: ' + str(esb_color))
     print('sun_data[0] (sunrise): ' + str(sun_data[0]))
@@ -536,8 +649,13 @@ def debug_print():
     print('cal_event_color_str: ' + str(cal_event_color_str))
     print('cur_weather: ' + cur_weather + '(is_init: ' + str(is_init) + ')')
     print('weather_refresh_t: ' + str(weather_refresh_t))
+    print('DJI_difference: ' + str(DJI_difference))
+    print('stocks_color_str: ' + str(stocks_color_str))
+    print('steelers_won: ' + str(steelers_won))
+    print('rangers_won: ' + str(rangers_won))
     print('priorities: ' + str(priorities))
     print('---------------------------')
+
 
 if __name__ == '__main__':
     tr = threading.Thread(target=pc_listener)
