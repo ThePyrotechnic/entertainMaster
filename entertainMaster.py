@@ -43,8 +43,11 @@ import requests
 import serial
 
 
-class Color:  # convenience class for difference of colors
-    def __init__(self, r, g, b):
+class Color:
+    """
+    Convenience class for the representation of colors.
+    """
+    def __init__(self, r: int, g: int, b: int):
         self.r = r
         self.g = g
         self.b = b
@@ -69,7 +72,10 @@ class Color:  # convenience class for difference of colors
         b = rgb[2]
         return cls(r, g, b)
 
-    def __add__(self, o):  # add and sub methods will over/underflow; meant to be used only when adding fractional color diffs (see the sun rise/set)
+    # add and sub methods will over/underflow
+    # meant to be used only when adding fractional color diffs 
+    # See also: sun rise/set
+    def __add__(self, o):
         return Color(self.r + o.r, self.g + o.g, self.b + o.b)
 
     def __sub__(self, o):
@@ -121,6 +127,9 @@ WEATHER_UPDATE_INTERVAL = 15  # minimum time, in seconds, between weather update
 
 
 def eprint(*args, **kwargs):
+    """
+    Print to stderr
+    """
     print(*args, file=sys.stderr, **kwargs)
 
 
@@ -468,7 +477,7 @@ def fetch_weather_data():
 
 def send_color_str(col_string: bytes):
     global bus_lock, arduino
-    print('sending ' + str(col_string))
+    print('sending', col_string)
     with bus_lock:
         arduino.write(col_string)
 
