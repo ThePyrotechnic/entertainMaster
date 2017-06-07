@@ -1,0 +1,71 @@
+//flag colors
+10f0201,i0501,f0203,f0201,i0501,f0203,f0800,i1500,f0803,i1503
+
+// 10 second pulse
+05i0004,f0212,f0304,i5004,i5004
+
+//boy vs girl
+02f1001,f2005
+
+
+//dot i0113,i0107,
+//dash i0313,i0107,
+//morse code for 256
+33i0113,i0107,i0113,i0107,i0313,i0107,i0313,i0107,i0313,i0107,i0607,i0113,i0107,i0113,i0107,i0113,i0107,i0113,i0107,i0113,i0107,i0607,i0313,i0107,i0113,i0107,i0113,i0107,i0113,i0107,i0113,i0107,i1407
+
+//peace
+02f1008,f1003
+
+//leif eriksoon
+06f1014,i9914,f1000,i5000,f1015,i9915
+
+//slow red white blue
+06f1000,i5000,f1003,i5003,f1001,i5001
+
+//fast red white blue
+03f0400,f0403,f0401
+
+//scary
+10f0500,i5000,i0116,f0200,i0116,f0200,i3000,10216,f0200,i5000
+
+//Halloween
+04f1006,i5006,f1011,i5011
+
+//Zyzz Birthday
+
+//Army Birthday
+04f0406,i5006,f0407,i5007
+
+//Blue Pulse
+06i0117,f0209,f0317,f0209,f0317,i9917
+
+//Thanksgiving
+06f1006,i5006,i5006,i5006,i5006,f1011
+
+//cyber
+05i0013,f1507,f1513,i5013,i5013
+
+//hanukkah
+02f1215,f1201
+
+//chirstmas eve
+06f4000,f1207,i5007,f4002,f1207,i5007
+
+//christmas day
+22f4000,f4007,f4002,f4007,f4000,f4007,f4002,f4007,f4000,f4007,f4002,f4007,f4000,f4007,f4002,f4007,i1000,i1002,i1000,i1002,i1000,i1002
+
+
+count = 0
+with open('holidays.txt','r',encoding='UTF-8') as rf:
+    for line in rf:
+        if ':000,000,000' not in line:
+            count += 1
+            print(str(count) + ' | ' + line.rstrip('\n'))
+print(str(count) + 'total)
+
+25 total
+prio 3: 5
+prio 4: 11
+prio 5: 6
+prio 6: 3
+
