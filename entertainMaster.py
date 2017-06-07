@@ -21,6 +21,12 @@
 #       9   DBL - Dim Blue
 #       10 DWH - Dim White
 #       11 MOV - Movie Orange
+#       12 DPR - Dim Purple
+#       13 DGR - Dim Green
+#       14 BRN - Brown
+#       15 YLW - Yellow
+#       16 DRE - Dim Red
+#       17 BLD - Blue, Diabetes
 # ex:
 # (purple) :200,000,050
 # (thunderstorm) 10f051,i501,i013,f021,i013,f021,i301,1023,f021,i601
@@ -108,11 +114,12 @@ sun_data = None
 sun_keyframes = None
 is_init = True
 sun_colors = {'rise': Color(255, 10, 0), 'mid': Color(255, 255, 255), 'set': None}
+last_sun_color = Color(255, 10, 0)
 
 cur_weather = None
 weather_refresh_t = datetime.datetime.today()
 
-priorities = {"sun": 0, "weather": 1}  # 0 - 5. 4 is highest normal prio, 5 is special prio, 0 is default. (-1 is ignored)
+priorities = {"sun": 0, "weather": 1}  # 0 - 6. 5 is highest normal prio, 6 is special prio, 0 is default. (-1 is ignored)
 
 EVENT_THREAD_INTERVAL = 5  # time, in seconds, for the master timer to wait before spawning a new event cycle
 WEATHER_UPDATE_INTERVAL = 15  # minimum time, in seconds, between weather update requests
@@ -264,7 +271,7 @@ def resume_interrupt():
 
 
 def sun_event():
-    global sun_keyframes, arduino
+    global sun_keyframes, arduino, last_sun_color
 
     print('\tFiring sun_event')
     if sun_keyframes:
@@ -281,7 +288,10 @@ def sun_event():
                 break
 
         if color is not None:
+            last_sun_color = color
             send_color_str(color.to_bytes())
+        else:
+            send_color_str(last_sun_color.to_bytes())
     # else the queue is empty, do nothing
 
 
@@ -397,11 +407,11 @@ def get_weather_priority():
     global cur_weather
 
     if "thunder" in cur_weather.lower():
-        return 4
+        return 5
     if "rain" in cur_weather.lower():
         return 2
     if "snow" in cur_weather.lower():
-        return 3
+        return 5
     else:
         return -1
 
@@ -418,8 +428,9 @@ def fetch_esb_color():
     flavor_str = str(data.find("p", "lighting-desc").string).lstrip("\n ")
     flavor_str = flavor_str.split(" ")
     for s in flavor_str:
-        if s.lower() in colors:
-            return Color.from_tuple(colors[s.lower()])
+        s = s.lower().rstrip(".,\\\'\"")
+        if s in colors:
+            return Color.from_tuple(colors[s])
     return None
 
 

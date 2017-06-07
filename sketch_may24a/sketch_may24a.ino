@@ -12,6 +12,24 @@
 //CC is a color code (given by position in states[])
 
 //color macros
+//       0   RED
+//       1   BLU
+//       2   GRN
+//       3   WHT
+//       4   PRP
+//       5   PNK
+//       6   ONG
+//       7   OFF
+//       8   LBL - Light Blue
+//       9   DBL - Dim Blue
+//       10 DWH - Dim White
+//       11 MOV - Movie Orange
+//       12 DPR - Dim Purple
+//       13 DGR - Dim Green
+//       14 BRN - Brown
+//       15 YLW - Yellow
+//       16 DRE - Dim Red
+//       17 BLD - Blue, Diabetes
 const char* RED = ":255,000,000";
 const char* BLU = ":000,000,255";
 const char* GRN = ":000,255,000";
@@ -23,8 +41,15 @@ const char* OFF = ":000,000,000";
 const char* LBL = ":000,100,255";
 const char* DBL = ":000,000,040";
 const char* DWH = ":040,040,040";
+const char* MOV = ":008,002,000";
+const char* DPR = ":025,000,005";
+const char* DGR = ":000,025,000";
+const char* BRN = ":255,030,004";
+const char* YLW = ":255,160,000";
+const char* DRE = ":002,000,000";
+const char* BLD = ":060,000,255";
 // must also add new macros to array
-const char* const states[] = {RED, BLU, GRN, WHT, PRP, PNK, ONG, OFF, LBL, DBL, DWH}; 
+const char* const states[] = {RED, BLU, GRN, WHT, PRP, PNK, ONG, OFF, LBL, DBL, DWH, MOV, DPR, DGR, BRN, YLW, DRE, BLD}; 
 
 //global current light values
 byte red = 0;
@@ -33,7 +58,6 @@ byte blu = 0;
 
 char in[INPUT_LEN + 1]; //input buffer
 bool msg = 0; // whether a message has been received
-bool isPgm = 0; // whether the current message is a program
 byte numCols = 0; // number of colors in the user's sent program
 
 void setup() {
@@ -69,8 +93,6 @@ void loop() {
         for (int a = 0; a < numCols; a++) {
           memcpy(lightData, &in[next], 5);
           lightData[5] = '\0';
-          Serial.print("lightData: ");
-          Serial.println(lightData);
           next += 6;
 
           parseSplit(lightData);
@@ -87,7 +109,6 @@ void serialEvent() {
 
   Serial.readBytes(in, INPUT_LEN);
   msg = 1;
-  isPgm = 0;
 }
 
 void parseSplit(char* split) {
