@@ -29,7 +29,7 @@
 #       17 BLD - Blue, Diabetes
 # ex:
 # (purple) :200,000,050
-# (thunderstorm) 10f051,i501,i013,f021,i013,f021,i301,1023,f021,i601
+# (thunderstorm) 10f0501,i5001,i0103,f0201,i0103,f0201,i3001,10203,f0201,i6001
 
 from __future__ import print_function
 from bs4 import BeautifulSoup
