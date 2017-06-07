@@ -290,7 +290,7 @@ def resume_interrupt():
 
 
 def sun_event():
-    global sun_keyframes, arduino, last_sun_color, cur_event
+    global sun_keyframes, last_sun_color, cur_event
 
     cur_event = 'sun'
 
