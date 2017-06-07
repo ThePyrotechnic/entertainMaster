@@ -26,19 +26,21 @@
 # (thunderstorm) 10f051,i501,i013,f021,i013,f021,i301,1023,f021,i601
 
 from __future__ import print_function
-from bs4 import BeautifulSoup
-from collections import deque
-from os import path
-import re
-import sys
-import serial
-import time
-import requests
+
+from collections import deque, namedtuple
 import datetime
-import threading
-import random
 import math
+from os import path
+import random
+import re
 import socket
+import sys
+import threading
+import time
+
+from bs4 import BeautifulSoup
+import requests
+import serial
 
 
 class Color:  # convenience class for difference of colors
@@ -48,10 +50,10 @@ class Color:  # convenience class for difference of colors
         self.b = b
 
     def __str__(self):
-        return 'r: ' + str(self.r) + ' g: ' + str(self.g) + ' b: ' + str(self.b)
+        return 'r: %d g: %d b: %d' % (self.r, self.g, self.b)
 
     def to_bytes(self):
-        return bytes(':' + str(self.r).zfill(3) + ',' + str(self.g).zfill(3) + ',' + str(self.b).zfill(3), encoding='ASCII')
+        return b':%03d,%03d,%03d' % (self.r, self.g, self.b)
 
     @classmethod
     def from_tuple(cls, rgb: tuple):
@@ -378,15 +380,17 @@ def random_color(from_table: bool = False, bright: bool = False, dim: bool = Fal
             Color(0, 0, 255)
         )
         return random.choice(color_table)
-
-    r_color = [random.randint(1, 255), random.randint(1, 255), random.randint(1, 255)]
+    
+    r_color = [random.randint(1, 255), 
+               random.randint(1, 255), 
+               random.randint(1, 255)]
     if bright:
-        if all(a < 200 for a in r_color):  # if all colors are not bright (< 200), make one color bright
+        # if all colors are not bright (< 200), make one color bright
+        if all(a < 200 for a in r_color):
             r_color[random.randint(0, 2)] = 200
-        return Color.from_list(r_color)
-
-    if dim:
-        for a, val in enumerate(r_color):  # make sure no colors are too bright, and turn off one color
+    elif dim:
+        # make sure no colors are too bright, and turn off one color
+        for a, val in enumerate(r_color):  
             if val > 150:
                 r_color[a] = random.randint(1, 63)  # 63 is ~25% brightness
         r_color[random.randint(0, 2)] = 0
