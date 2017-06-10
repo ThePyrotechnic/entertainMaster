@@ -131,7 +131,9 @@ esb_color = None
 sun_data = None
 sun_keyframes = None
 is_init = True
-sun_colors = {'rise': Color(255, 10, 0), 'mid': Color(255, 255, 255), 'set': None}
+sun_colors = {'rise': Color(255, 10, 0), 
+              'mid': Color(255, 255, 255), 
+              'set': None}
 last_sun_color = Color(255, 10, 0)
 
 cur_weather = None
@@ -146,7 +148,12 @@ DJI_difference = None
 not_fetched_stocks = True
 stocks_color_str = None
 
-priorities = {"sun": 0, "weather": -1, "calendar": -1, "sports": -1, "stocks": -1}  # 0 - 6. 5 is highest normal prio, 6 is special prio, 0 is default. (-1 is ignored)
+# 0 - 6. 5 is highest normal prio, 6 is special prio, 0 is default. (-1 is ignored)
+priorities = {'sun': 0, 
+              'weather': -1, 
+              'calendar': -1, 
+              'sports': -1, 
+              'stocks': -1}
 
 EVENT_THREAD_INTERVAL = 5  # time, in seconds, for the master timer to wait before spawning a new event cycle
 WEATHER_UPDATE_INTERVAL = 15  # minimum time, in seconds, between weather update requests
@@ -165,7 +172,7 @@ def init():
     try:
         arduino = serial.Serial('COM4', 9600, timeout=0.2)
     except serial.SerialException as e:
-        eprint("unable to connect to arduino. Information: ")
+        eprint('unable to connect to arduino. Information: ')
         eprint('\t', e, sep='')
         exit(0)
     time.sleep(2)
@@ -203,7 +210,7 @@ def init():
     # start decision engine
     master_timer()
 
-    print("done")
+    print('done')
 
 
 def master_timer():
@@ -224,14 +231,14 @@ def event_master():
     update_event_data()
     update_priorities()
     next_event = max(priorities, key=priorities.get)
-    globals()[next_event + "_event"]()
+    globals()[next_event + '_event']()
 
 
 def update_priorities():
     global priorities
     # TODO remember to add any changing event priorities here
 
-    priorities["weather"] = get_weather_priority()
+    priorities['weather'] = get_weather_priority()
 
 
 def update_event_data():
@@ -267,20 +274,22 @@ def pc_listener():
 
 def accept_info(client_socket):
     global interrupt_lock, interrupt_active
-    print("Received client message: ")
+    print('Received client message: ')
 
     msg = client_socket.recv(1)
-    print("\t" + str(msg))
+    print('\t', msg, sep='')
     fire_interrupt(msg)
     client_socket.close()
 
 
 def fire_interrupt(signal):
+    """
+    BYTE CODES:
+    - m = movie mode
+    - s = sleep mode (unimplemented)
+    - x = cancel interrupt
+    """
     global interrupt_lock, interrupt_active, cur_event
-    # BYTE CODES:
-    # m = movie mode
-    # s = sleep mode (unimplemented)
-    # x = cancel interrupt
     if signal == b'x':
         with interrupt_lock:
             interrupt_active = False
@@ -296,14 +305,14 @@ def fire_interrupt(signal):
 
     # saves interrupt state to be resumed if program restarts
     # (i.e if restarts at midnight during a movie)
-    with open("interrupt.temp", 'wb') as text_file:
+    with open('interrupt.temp', 'wb') as text_file:
         text_file.write(signal)
 
 
 def resume_interrupt():
     global interrupt_lock, interrupt_active, cur_event
-    if path.isfile("interrupt.temp"):
-        with open("interrupt.temp", 'rb') as read_file:
+    if path.isfile('interrupt.temp'):
+        with open('interrupt.temp', 'rb') as read_file:
             signal = read_file.read()
             if signal == b'x':  # should never happen, but just in case
                 with interrupt_lock:
@@ -349,7 +358,7 @@ def weather_event():
     cur_event = 'weather'
 
     print('\tFiring weather_event')
-    if "thunder" in cur_weather.lower():
+    if 'thunder' in cur_weather.lower():
         # chunks:
         # flash - i0103,f0201
         # long wait - f0201,i5001
@@ -360,7 +369,7 @@ def weather_event():
             str_to_send += b',' + random.choice(chunks)
         send_color_str(str_to_send)
 
-    if "rain" in cur_weather.lower():
+    if 'rain' in cur_weather.lower():
         # chunks:
         # long light blue - f0508,i5008
         # long blue - f0501,i5001
@@ -374,7 +383,7 @@ def weather_event():
             str_to_send += b',' + random.choice(chunks)
         send_color_str(str_to_send)
 
-    if "snow" in cur_weather.lower():
+    if 'snow' in cur_weather.lower():
         # chunks:
         # flash - i0110,f0303
         # long wait - f0203,i5003
@@ -386,7 +395,7 @@ def weather_event():
         send_color_str(str_to_send)
 
     else:
-        eprint("Unknown weather event: " + cur_weather)
+        eprint('Unknown weather event: ' + cur_weather)
 
 
 def calendar_event():
@@ -416,7 +425,7 @@ def sports_event():
     elif team == 'steelers':
         send_color_str(b'04f1015,i5015,f0207,i5007')
     else:
-        eprint("Sports event chosen, but no team won a game last night")
+        eprint('Sports event chosen, but no team won a game last night')
 
 
 def stocks_event():
@@ -426,7 +435,7 @@ def stocks_event():
     if stocks_color_str is not None:
         send_color_str(stocks_color_str)
     else:
-        eprint("Stocks event chosen, but there is no stock color set")
+        eprint('Stocks event chosen, but there is no stock color set')
 
 
 def generate_sun_keys():
@@ -498,11 +507,11 @@ def random_color(from_table: bool = False, bright: bool = False, dim: bool = Fal
 def get_weather_priority():
     global cur_weather
 
-    if "thunder" in cur_weather.lower():
+    if 'thunder' in cur_weather.lower():
         return 5
-    if "rain" in cur_weather.lower():
+    if 'rain' in cur_weather.lower():
         return 2
-    if "snow" in cur_weather.lower():
+    if 'snow' in cur_weather.lower():
         return 5
     else:
         return -1
@@ -510,10 +519,10 @@ def get_weather_priority():
 
 def fetch_esb_color():
     try:
-        res = requests.get("http://www.esbnyc.com/explore/tower-lights/calendar")
+        res = requests.get('http://www.esbnyc.com/explore/tower-lights/calendar')
     except requests.exceptions.RequestException as e:
-        eprint("unable to connect to www.esbnyc.com. Information: ")
-        eprint('\t' + str(e))
+        eprint('unable to connect to www.esbnyc.com. Information: ')
+        eprint('\t', e, sep='')
 
     c = res.content
     data = BeautifulSoup(c, 'html.parser')
@@ -530,23 +539,23 @@ def fetch_weather_data():
     global is_init
 
     try:
-        res = requests.get("https://www.wunderground.com/cgi-bin/findweather/getForecast?query=Whittier+Oaks%2C+NJ")
+        res = requests.get('https://www.wunderground.com/cgi-bin/findweather/getForecast?query=Whittier+Oaks%2C+NJ')
     except requests.exceptions.RequestException as e:
-        eprint("unable to connect to www.wunderground.com. Information: ")
+        eprint('unable to connect to www.wunderground.com. Information: ')
         eprint('\t', e, sep='')
         return None
 
     c = res.content
-    data = BeautifulSoup(c, "html.parser")
-    phrase_now = str(data.find("div", id="curCond").contents[0].contents[0])
+    data = BeautifulSoup(c, 'html.parser')
+    phrase_now = str(data.find('div', id='curCond').contents[0].contents[0])
 
     if is_init:  # On first run also gather sun data for the day
         # TODO make ampm more robust
-        rise_t_str = data.find("span", id="cc-sun-rise")
+        rise_t_str = data.find('span', id='cc-sun-rise')
         ampm = rise_t_str.parent.contents[2]
         rise_t_str = str(rise_t_str.contents[0]) + ' ' + str(ampm.contents[0])
 
-        set_t_str = data.find("span", id="cc-sun-set")
+        set_t_str = data.find('span', id='cc-sun-set')
         ampm = set_t_str.parent.contents[2]
         set_t_str = str(set_t_str.contents[0]) + ' ' + str(ampm.contents[0])
 
@@ -580,10 +589,10 @@ def parse_calendar_event():
 def crawl_twitter_accounts():
     global priorities, rangers_won, steelers_won
 
-    consumer_key = "8jQgMroN3l5lOgZ4gg8PY6PsD"
-    consumer_secret = "ZmpFmplX3qXdIQyFdMXeS61o4kHMGPFXw3lEwkGIODwYW34mZf"
-    access_token = "1352886691-FeCAGFBWbt3ns4vkz1792IpBt0htAZqAV31VX0C"
-    access_secret = "h3Vx59GPYVEgKm4jla9pHEGpSoWJLNHsCpqLMsbC4angu"
+    consumer_key = '8jQgMroN3l5lOgZ4gg8PY6PsD'
+    consumer_secret = 'ZmpFmplX3qXdIQyFdMXeS61o4kHMGPFXw3lEwkGIODwYW34mZf'
+    access_token = '1352886691-FeCAGFBWbt3ns4vkz1792IpBt0htAZqAV31VX0C'
+    access_secret = 'h3Vx59GPYVEgKm4jla9pHEGpSoWJLNHsCpqLMsbC4angu'
 
     auth = OAuthHandler(consumer_key, consumer_secret)
     auth.set_access_token(access_token, access_secret)
@@ -613,14 +622,14 @@ def fetch_stock_data():
     global priorities, DJI_difference, stocks_color_str
 
     try:
-        res = requests.get("https://www.google.com/finance?q=INDEXDJX:.DJI")
+        res = requests.get('https://www.google.com/finance?q=INDEXDJX:.DJI')
     except requests.exceptions.RequestException as e:
-        eprint("unable to connect to Google Finance. Information: ")
+        eprint('unable to connect to Google Finance. Information: ')
         eprint('\t', e, sep='')
 
     c = res.content
-    data = BeautifulSoup(c, "html.parser")
-    stock_diff = str(data.find("span", id="ref_983582_c").string)
+    data = BeautifulSoup(c, 'html.parser')
+    stock_diff = str(data.find('span', id='ref_983582_c').string)
     DJI_difference = float(stock_diff)
 
     if 200.0 <= DJI_difference < 300:
