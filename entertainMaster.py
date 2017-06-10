@@ -1,35 +1,37 @@
-# The program is expected to be (re)started each day before sunrise
+"""
+The program is expected to be (re)started each day before sunrise
 
-# ARDUINO MESSAGE FORMAT:
-# :RRR,GGG,BBB                             <-- set new color
-# nnXttCC,XttCC,XttCC,XttCC,XttCC,XttCC... <-- program new loop
-#   nn is number of colors in sequence (max 99)
-#   X is 'f' (fade) or 'i' (instant)
-#   tt is time (for 'i': time to wait after switching, in hundreds of millis. For 'f': time between fade steps, in millis)
-#   CC is a color code (given by position in states[])
-#   Loops repeat until another sequence is read in
-#   COLOR TABLE:
-#       0   RED
-#       1   BLU
-#       2   GRN
-#       3   WHT
-#       4   PRP
-#       5   PNK
-#       6   ONG
-#       7   OFF
-#       8   LBL - Light Blue
-#       9   DBL - Dim Blue
-#       10 DWH - Dim White
-#       11 MOV - Movie Orange
-#       12 DPR - Dim Purple
-#       13 DGR - Dim Green
-#       14 BRN - Brown
-#       15 YLW - Yellow
-#       16 DRE - Dim Red
-#       17 BLD - Blue, Diabetes
-# ex:
-# (purple) :200,000,050
-# (thunderstorm) 10f0501,i5001,i0103,f0201,i0103,f0201,i3001,10203,f0201,i6001
+ARDUINO MESSAGE FORMAT:
+:RRR,GGG,BBB                             <-- set new color
+nnXttCC,XttCC,XttCC,XttCC,XttCC,XttCC... <-- program new loop
+  nn is number of colors in sequence (max 99)
+  X is 'f' (fade) or 'i' (instant)
+  tt is time (for 'i': time to wait after switching, in hundreds of millis. For 'f': time between fade steps, in millis)
+  CC is a color code (given by position in states[])
+  Loops repeat until another sequence is read in
+  COLOR TABLE:
+      0   RED
+      1   BLU
+      2   GRN
+      3   WHT
+      4   PRP
+      5   PNK
+      6   ONG
+      7   OFF
+      8   LBL - Light Blue
+      9   DBL - Dim Blue
+      10 DWH - Dim White
+      11 MOV - Movie Orange
+      12 DPR - Dim Purple
+      13 DGR - Dim Green
+      14 BRN - Brown
+      15 YLW - Yellow
+      16 DRE - Dim Red
+      17 BLD - Blue, Diabetes
+ex:
+(purple) :200,000,050
+(thunderstorm) 10f0501,i5001,i0103,f0201,i0103,f0201,i3001,10203,f0201,i6001
+"""
 
 from __future__ import print_function
 
@@ -43,6 +45,7 @@ import socket
 import sys
 import threading
 import time
+import warnings
 
 from bs4 import BeautifulSoup
 import requests
@@ -68,6 +71,8 @@ class Color:
 
     @classmethod
     def from_tuple(cls, rgb: tuple):
+        warnings.warn('from_list and from_tuple methods are deprecated.'
+                      'Use Color(*rgb) instead.')
         r = rgb[0]
         g = rgb[1]
         b = rgb[2]
@@ -75,6 +80,8 @@ class Color:
 
     @classmethod
     def from_list(cls, rgb: list):
+        warnings.warn('from_list and from_tuple methods are deprecated.'
+                      'Use Color(*rgb) instead.')
         r = rgb[0]
         g = rgb[1]
         b = rgb[2]
@@ -159,17 +166,17 @@ def init():
         arduino = serial.Serial('COM4', 9600, timeout=0.2)
     except serial.SerialException as e:
         eprint("unable to connect to arduino. Information: ")
-        eprint('\t' + str(e))
+        eprint('\t', e, sep='')
         exit(0)
     time.sleep(2)
 
     # populate the colors Dictionary
-    with open('colors.txt', encoding='UTF-8') as s:
-        for line in s:
-            if line[0] == '*':
+    with open('colors.txt', encoding='UTF-8') as colors:
+        for color in colors:
+            if color.startswith('*'):
                 continue
-            line = line.split(',')
-            colors[line[0].lower()] = (int(line[1]), int(line[2]), int(line[3].rstrip('\n')))
+            color_name, r, g, b = line.split(',')
+            colors[color_name.lower()] = (int(r), int(g), int(b))
 
     # gather initial and once-per-day event data
     # order may matter!
@@ -423,7 +430,7 @@ def stocks_event():
 
 
 def generate_sun_keys():
-    global sun_data, sun_colors, esb_color
+    global sun_data, sun_colors
 
     keyframes = deque()
     sun_diff = sun_data[1] - sun_data[0]
@@ -485,7 +492,7 @@ def random_color(from_table: bool = False, bright: bool = False, dim: bool = Fal
             if val > 150:
                 r_color[a] = random.randint(1, 63)  # 63 is ~25% brightness
         r_color[random.randint(0, 2)] = 0
-    return Color.from_list(r_color)
+    return Color(*r_color)
 
 
 def get_weather_priority():
@@ -509,13 +516,13 @@ def fetch_esb_color():
         eprint('\t' + str(e))
 
     c = res.content
-    data = BeautifulSoup(c, "html.parser")
-    flavor_str = str(data.find("p", "lighting-desc").string).lstrip("\n ")
-    flavor_str = flavor_str.split(" ")
+    data = BeautifulSoup(c, 'html.parser')
+    flavor_str = str(data.find('p', 'lighting-desc').string).lstrip('\n ')
+    flavor_str = flavor_str.split(' ')
     for s in flavor_str:
         s = s.lower().rstrip(".,\\\'\"")
         if s in colors:
-            return Color.from_tuple(colors[s])
+            return Color(*colors[s])
     return None
 
 
@@ -526,7 +533,7 @@ def fetch_weather_data():
         res = requests.get("https://www.wunderground.com/cgi-bin/findweather/getForecast?query=Whittier+Oaks%2C+NJ")
     except requests.exceptions.RequestException as e:
         eprint("unable to connect to www.wunderground.com. Information: ")
-        eprint('\t' + str(e))
+        eprint('\t', e, sep='')
         return None
 
     c = res.content
@@ -586,12 +593,12 @@ def crawl_twitter_accounts():
     try:
         steelers_tweet = api.user_timeline('DidSteelersWin', count=1)[0].text[:3].rstrip(',')
     except tweepy.error.TweepError as e:
-        eprint('Failed to connect to Steelers\' Twitter. error: \n\t' + str(e))
+        eprint('Failed to connect to Steelers\' Twitter. error: \n\t', e, sep='')
 
     try:
         rangers_tweet = api.user_timeline('DidRangersWin', count=1)[0].text[:3].rstrip(',')
     except tweepy.error.TweepError as e:
-        eprint('Failed to connect to Rangers\' Twitter. error: \n\t' + str(e))
+        eprint('Failed to connect to Rangers\' Twitter. error: \n\t', e, sep='')
 
     if rangers_tweet.lower() == 'yes':
         rangers_won = True
@@ -609,7 +616,7 @@ def fetch_stock_data():
         res = requests.get("https://www.google.com/finance?q=INDEXDJX:.DJI")
     except requests.exceptions.RequestException as e:
         eprint("unable to connect to Google Finance. Information: ")
-        eprint('\t' + str(e))
+        eprint('\t', e, sep='')
 
     c = res.content
     data = BeautifulSoup(c, "html.parser")
