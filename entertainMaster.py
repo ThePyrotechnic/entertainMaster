@@ -177,14 +177,6 @@ def init():
         exit(0)
     time.sleep(2)
 
-    # populate the colors Dictionary
-    with open('colors.txt', encoding='UTF-8') as colors:
-        for color in colors:
-            if color.startswith('*'):
-                continue
-            color_name, r, g, b = line.split(',')
-            colors[color_name.lower()] = (int(r), int(g), int(b))
-
     # gather initial and once-per-day event data
     # order may matter!
     sun_colors['set'] = esb_color = fetch_esb_color()
@@ -217,9 +209,10 @@ def master_timer():
     global EVENT_THREAD_INTERVAL, interrupt_lock, interrupt_active
     while True:
         with interrupt_lock:
-                if not interrupt_active:
-                    t = threading.Thread(target=event_master)  # Place a breakpoint here to manually allow threads through while debugging
-                    t.start()
+            if not interrupt_active:
+                # Place a breakpoint here to manually allow threads through while debugging
+                t = threading.Thread(target=event_master)  
+                t.start()
 
         time.sleep(EVENT_THREAD_INTERVAL)  # TODO change to 30 min
 
@@ -518,6 +511,19 @@ def get_weather_priority():
 
 
 def fetch_esb_color():
+    """
+    Populate the global `colors` dictionary and find the 
+    color of the Empire State Building on the current night.
+    """
+    # populate the colors Dictionary
+    with open('colors.txt', encoding='UTF-8') as colors_file:
+        for color in colors_file:
+            if color.startswith('*'):
+                continue
+            color_name, r, g, b = line.split(',')
+            colors[color_name.lower()] = Color(int(r), int(g), int(b))
+    
+    # get the color
     try:
         res = requests.get('http://www.esbnyc.com/explore/tower-lights/calendar')
     except requests.exceptions.RequestException as e:
@@ -527,11 +533,11 @@ def fetch_esb_color():
     c = res.content
     data = BeautifulSoup(c, 'html.parser')
     flavor_str = str(data.find('p', 'lighting-desc').string).lstrip('\n ')
-    flavor_str = flavor_str.split(' ')
-    for s in flavor_str:
-        s = s.lower().rstrip(".,\\\'\"")
-        if s in colors:
-            return Color(*colors[s])
+
+    for flavor in flavor_str.split(' '):
+        color = colors.get(flavor.lower().rstrip(".,\\\'\""))
+        if color:
+            return color
     return None
 
 
