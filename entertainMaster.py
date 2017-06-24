@@ -69,6 +69,9 @@ class Color:
     def to_bytes(self):
         return b':%03d,%03d,%03d' % (self.r, self.g, self.b)
 
+    def not_white(self):
+        return True if self.r and self.g and self.b != 255 else False
+
     @classmethod
     def from_tuple(cls, rgb: tuple):
         warnings.warn('from_list and from_tuple methods are deprecated.'
@@ -100,21 +103,21 @@ class Color:
         return Color(self.r * o, self.g * o, self.b * o)
 
     def int_div(self, o):
-        if self. r < 0:
+        if self.r < 0:
             r = int(math.ceil(self.r / o))
         else:
             r = self.r // o
-            
-        if self. g < 0:
+
+        if self.g < 0:
             g = int(math.ceil(self.g / o))
         else:
             g = self.g // o
-            
-        if self. b < 0:
+
+        if self.b < 0:
             b = int(math.ceil(self.b / o))
         else:
             b = self.b // o
-            
+
         return Color(r, g, b)
 
 
@@ -128,11 +131,13 @@ cur_event = None
 
 esb_color = None
 
-sun_data = None
+# Default sunrise/set times, just in case
+sun_data = (datetime.datetime.combine(datetime.date.today(), datetime.time(hour=6)),
+            datetime.datetime.combine(datetime.date.today(), datetime.time(hour=20, minute=30)))
 sun_keyframes = None
 is_init = True
-sun_colors = {'rise': Color(255, 10, 0), 
-              'mid': Color(255, 255, 255), 
+sun_colors = {'rise': Color(255, 10, 0),
+              'mid': Color(255, 255, 255),
               'set': None}
 last_sun_color = Color(255, 10, 0)
 
@@ -149,10 +154,10 @@ not_fetched_stocks = True
 stocks_color_str = None
 
 # 0 - 6. 5 is highest normal prio, 6 is special prio, 0 is default. (-1 is ignored)
-priorities = {'sun': 0, 
-              'weather': -1, 
-              'calendar': -1, 
-              'sports': -1, 
+priorities = {'sun': 0,
+              'weather': -1,
+              'calendar': -1,
+              'sports': -1,
               'stocks': -1}
 
 EVENT_THREAD_INTERVAL = 5  # time, in seconds, for the master timer to wait before spawning a new event cycle
@@ -171,10 +176,11 @@ def init():
     # hog the Arduino
     try:
         arduino = serial.Serial('COM4', 9600, timeout=0.2)
+        # eprint('Running without an arduino connection. Nothing will happen!')
     except serial.SerialException as e:
         eprint('unable to connect to arduino. Information: ')
         eprint('\t', e, sep='')
-        exit(0)
+        exit(1)
     time.sleep(2)
 
     # gather initial and once-per-day event data
@@ -182,8 +188,9 @@ def init():
     sun_colors['set'] = esb_color = fetch_esb_color()
 
     dat = fetch_weather_data()
-    sun_data = (dat[0], dat[1])
-    cur_weather = dat[2]
+    if dat is not None:
+        sun_data = (dat[0], dat[1])
+        cur_weather = dat[2]
     sun_keyframes = generate_sun_keys()
 
     # read holidays.txt for an event
@@ -191,6 +198,11 @@ def init():
 
     # read tweets for sports information
     crawl_twitter_accounts()
+
+    # get stock data if necessary
+    if datetime.datetime.today().hour >= 16:
+        fetch_stock_data()
+        not_fetched_stocks = False  # only fetch once
 
     # resume interrupts if necessary
     resume_interrupt()
@@ -211,7 +223,7 @@ def master_timer():
         with interrupt_lock:
             if not interrupt_active:
                 # Place a breakpoint here to manually allow threads through while debugging
-                t = threading.Thread(target=event_master)  
+                t = threading.Thread(target=event_master, daemon=True)
                 t.start()
 
         time.sleep(EVENT_THREAD_INTERVAL)  # TODO change to 30 min
@@ -248,11 +260,12 @@ def update_event_data():
         weather_refresh_t = datetime.datetime.today()
 
     # check Dow Jones after NASDAQ closes at 4:00PM
-    if not_fetched_stocks and today.hour >= 15:
+    if not_fetched_stocks and today.hour >= 16:
         fetch_stock_data()
         not_fetched_stocks = False  # only fetch once
 
 
+# Could possibly be multithreaded, but with a 15 minute main loop refresh time, it isn't really competing for resources.
 def pc_listener():
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.bind((socket.gethostbyname(socket.gethostname()), 8493))
@@ -261,7 +274,7 @@ def pc_listener():
 
     while True:
         (client_socket, address) = server_socket.accept()
-        ct = threading.Thread(target=accept_info, args=[client_socket])
+        ct = threading.Thread(target=accept_info, args=[client_socket])  # Not a daemon since it writes to a file
         ct.run()
 
 
@@ -279,22 +292,33 @@ def fire_interrupt(signal):
     """
     BYTE CODES:
     - m = movie mode
-    - s = sleep mode (unimplemented)
+    - z = sleep mode (unimplemented)
     - x = cancel interrupt
+     - s = music mode (unimplemented )
     """
     global interrupt_lock, interrupt_active, cur_event
+
     if signal == b'x':
         with interrupt_lock:
             interrupt_active = False
         open('interrupt.temp', 'w').close()
         return
-    elif signal == b'm':
-        with interrupt_lock:  # do this inside each interrupt to ensure we only block on a valid interrupt
+
+    else:
+        with interrupt_lock:
             interrupt_active = True
         cur_event = 'interrupt'
-        send_color_str(b'03f0203,f0206,f0811')
-        time.sleep(2)
-        send_color_str(b'01i0011')
+
+        if signal == b'm':
+            send_color_str(b'03f0203,f0206,f0811')
+            time.sleep(2)
+            send_color_str(b'01i0011')
+
+        elif signal == b'z':
+            send_color_str(b':002,000,000')
+
+        elif signal == b's':  # song mode
+            send_color_str(signal)  # TODO Implement on arduino
 
     # saves interrupt state to be resumed if program restarts
     # (i.e if restarts at midnight during a movie)
@@ -316,6 +340,7 @@ def resume_interrupt():
                     interrupt_active = True
                 cur_event = 'interrupt'
                 send_color_str(b'01i0011')  # this is different because if it gets resumed then the program should not re-animate the 'fade-in'
+                # elif signal == b's'
 
 
 def sun_event():
@@ -342,7 +367,7 @@ def sun_event():
             send_color_str(color.to_bytes())
         else:
             send_color_str(last_sun_color.to_bytes())
-    # else the queue is empty, do nothing
+            # else the queue is empty, do nothing
 
 
 def weather_event():
@@ -472,7 +497,6 @@ def generate_sun_keys():
 
 
 def random_color(from_table: bool = False, bright: bool = False, dim: bool = False):
-
     if from_table:  # TODO add more colors to the table
         color_table = (
             Color(255, 0, 0),
@@ -480,9 +504,9 @@ def random_color(from_table: bool = False, bright: bool = False, dim: bool = Fal
             Color(0, 0, 255)
         )
         return random.choice(color_table)
-    
-    r_color = [random.randint(1, 255), 
-               random.randint(1, 255), 
+
+    r_color = [random.randint(1, 255),
+               random.randint(1, 255),
                random.randint(1, 255)]
     if bright:
         # if all colors are not bright (< 200), make one color bright
@@ -490,7 +514,7 @@ def random_color(from_table: bool = False, bright: bool = False, dim: bool = Fal
             r_color[random.randint(0, 2)] = 200
     elif dim:
         # make sure no colors are too bright, and turn off one color
-        for a, val in enumerate(r_color):  
+        for a, val in enumerate(r_color):
             if val > 150:
                 r_color[a] = random.randint(1, 63)  # 63 is ~25% brightness
         r_color[random.randint(0, 2)] = 0
@@ -512,7 +536,7 @@ def get_weather_priority():
 
 def fetch_esb_color():
     """
-    Populate the global `colors` dictionary and find the 
+    Populate the global `colors` dictionary and find the
     color of the Empire State Building on the current night.
     """
     # populate the colors Dictionary
@@ -520,9 +544,9 @@ def fetch_esb_color():
         for color in colors_file:
             if color.startswith('*'):
                 continue
-            color_name, r, g, b = line.split(',')
+            color_name, r, g, b = color.split(',')
             colors[color_name.lower()] = Color(int(r), int(g), int(b))
-    
+
     # get the color
     try:
         res = requests.get('http://www.esbnyc.com/explore/tower-lights/calendar')
@@ -536,7 +560,7 @@ def fetch_esb_color():
 
     for flavor in flavor_str.split(' '):
         color = colors.get(flavor.lower().rstrip(".,\\\'\""))
-        if color:
+        if color and color.not_white():
             return color
     return None
 
@@ -553,7 +577,12 @@ def fetch_weather_data():
 
     c = res.content
     data = BeautifulSoup(c, 'html.parser')
-    phrase_now = str(data.find('div', id='curCond').contents[0].contents[0])
+    try:
+        phrase_now = str(data.find('div', id='curCond').contents[0].contents[0])
+    except AttributeError as e:
+        eprint('unable read data from www.wunderground.com. Information: ')
+        eprint('\t', e, sep='')
+        return None
 
     if is_init:  # On first run also gather sun data for the day
         # TODO make ampm more robust
@@ -604,22 +633,27 @@ def crawl_twitter_accounts():
     auth.set_access_token(access_token, access_secret)
 
     api = tweepy.API(auth, timeout=5)
-    rangers_tweet = steelers_tweet = None
+    rangers_tweet_text = steelers_tweet_text = rangers_tweet_date = steelers_tweet_date = None
+    yesterday = datetime.date.today() - datetime.timedelta(days=1)
     try:
-        steelers_tweet = api.user_timeline('DidSteelersWin', count=1)[0].text[:3].rstrip(',')
+        steelers_tweet = api.user_timeline('DidSteelersWin', count=1)[0]
+        steelers_tweet_date = steelers_tweet.created_at.date()
+        steelers_tweet_text = steelers_tweet.text[:3].rstrip(',')
     except tweepy.error.TweepError as e:
         eprint('Failed to connect to Steelers\' Twitter. error: \n\t', e, sep='')
 
     try:
-        rangers_tweet = api.user_timeline('DidRangersWin', count=1)[0].text[:3].rstrip(',')
+        rangers_tweet = api.user_timeline('DidRangersWin', count=1)[0]
+        rangers_tweet_date = rangers_tweet.created_at.date()
+        rangers_tweet_text = rangers_tweet.text[:3].rstrip(',')
     except tweepy.error.TweepError as e:
         eprint('Failed to connect to Rangers\' Twitter. error: \n\t', e, sep='')
 
-    if rangers_tweet.lower() == 'yes':
+    if rangers_tweet_text.lower() == 'yes' and rangers_tweet_date == yesterday:  # Make sure it is from yesterday
         rangers_won = True
         priorities['sports'] = 3
 
-    if steelers_tweet.lower() == 'yes':
+    if steelers_tweet_text.lower() == 'yes' and steelers_tweet_date == yesterday:
         steelers_won = True
         priorities['sports'] = 3
 
@@ -657,6 +691,7 @@ def send_color_str(col_string: bytes):
     print('sending', col_string)
     with bus_lock:
         arduino.write(col_string)
+        # eprint('No connection to arduino!')
 
 
 def debug_print():
@@ -680,6 +715,6 @@ def debug_print():
 
 
 if __name__ == '__main__':
-    tr = threading.Thread(target=pc_listener)
+    tr = threading.Thread(target=pc_listener, daemon=True)
     tr.start()
     init()
