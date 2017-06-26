@@ -135,11 +135,12 @@ esb_color = None
 sun_data = (datetime.datetime.combine(datetime.date.today(), datetime.time(hour=6)),
             datetime.datetime.combine(datetime.date.today(), datetime.time(hour=20, minute=30)))
 sun_keyframes = None
+sun_key_count = 0
 is_init = True
 sun_colors = {'rise': Color(255, 10, 0),
               'mid': Color(255, 255, 255),
               'set': None}
-last_sun_color = Color(255, 10, 0)
+last_sun_color = (Color(255, 10, 0), 0)
 
 cur_weather = None
 weather_refresh_t = datetime.datetime.today()
@@ -160,8 +161,8 @@ priorities = {'sun': 0,
               'sports': -1,
               'stocks': -1}
 
-EVENT_THREAD_INTERVAL = 5  # time, in seconds, for the master timer to wait before spawning a new event cycle
-WEATHER_UPDATE_INTERVAL = 15  # minimum time, in seconds, between weather update requests
+EVENT_THREAD_INTERVAL = 5  # time, in minutes, for the master timer to wait before spawning a new event cycle
+WEATHER_UPDATE_INTERVAL = 15  # minimum time, in minutes, between weather update requests
 
 
 def eprint(*args, **kwargs):
@@ -172,7 +173,7 @@ def eprint(*args, **kwargs):
 
 
 def init():
-    global esb_color, arduino, sun_data, cur_weather, sun_keyframes
+    global esb_color, arduino, sun_data, cur_weather, sun_keyframes, not_fetched_stocks
     # hog the Arduino
     try:
         arduino = serial.Serial('COM4', 9600, timeout=0.2)
@@ -226,7 +227,7 @@ def master_timer():
                 t = threading.Thread(target=event_master, daemon=True)
                 t.start()
 
-        time.sleep(EVENT_THREAD_INTERVAL)  # TODO change to 30 min
+        time.sleep(EVENT_THREAD_INTERVAL * 60)  # change to seconds when debugging
 
 
 def event_master():
@@ -249,7 +250,7 @@ def update_priorities():
 def update_event_data():
     global weather_refresh_t, cur_weather, not_fetched_stocks, WEATHER_UPDATE_INTERVAL
     # TODO remember to add any new events here
-    weather_refresh = datetime.timedelta(seconds=WEATHER_UPDATE_INTERVAL)  # TODO change to minutes
+    weather_refresh = datetime.timedelta(seconds=WEATHER_UPDATE_INTERVAL * 60)  # change to seconds when debugging
 
     today = datetime.datetime.today()
 
@@ -284,7 +285,12 @@ def accept_info(client_socket):
 
     msg = client_socket.recv(1)
     print('\t', msg, sep='')
-    fire_interrupt(msg)
+    if msg == b'1':  # status update request
+        client_socket.sendall(cur_event.encode('UTF-8'))
+    else:
+        response = fire_interrupt(msg)
+        client_socket.sendall(response.encode('UTF-8'))
+        print('sent event: %s' % response)
     client_socket.close()
 
 
@@ -299,60 +305,114 @@ def fire_interrupt(signal):
     global interrupt_lock, interrupt_active, cur_event
 
     if signal == b'x':
-        with interrupt_lock:
-            interrupt_active = False
-        open('interrupt.temp', 'w').close()
-        return
+        if interrupt_active:
+            with interrupt_lock:
+                interrupt_active = False
+            open('interrupt.temp', 'w').close()
+
+            cur_event = None
+            t = threading.Thread(target=event_master, daemon=True)
+            t.start()
+
+            while cur_event is None:  # wait for event_master thread to create a new event. Potentially unsafe. TODO test this
+                time.sleep(2)
+
+            return cur_event
 
     else:
         with interrupt_lock:
             interrupt_active = True
-        cur_event = 'interrupt'
 
         if signal == b'm':
             send_color_str(b'03f0203,f0206,f0811')
-            time.sleep(2)
+            time.sleep(3)
             send_color_str(b'01i0011')
+            cur_event = 'movie'
 
         elif signal == b'z':
+            send_color_str(b'01f0416')
+            time.sleep(2)
             send_color_str(b':002,000,000')
+            cur_event = 'sleep'
+
+        elif signal == b'r':  # relax mode
+            print('Unimplemented')
+            cur_event = 'relax'
 
         elif signal == b's':  # song mode
             send_color_str(signal)  # TODO Implement on arduino
+            cur_event = 'music'
+
+        elif signal == b'c':  # custom color
+            print('Unimplemented')
+            cur_event = 'color'
+
+        elif signal == b'v':  # custom string
+            print('Unimplemented')
+            cur_event = 'string'
+
+        elif signal == b'o':
+            send_color_str(b':000,000,000')
+            cur_event = 'off'
 
     # saves interrupt state to be resumed if program restarts
     # (i.e if restarts at midnight during a movie)
     with open('interrupt.temp', 'wb') as text_file:
         text_file.write(signal)
+    return cur_event
 
 
+# TODO merge this into fire_interrupt by sending it a "resume = true" boolean to allow for variations
 def resume_interrupt():
     global interrupt_lock, interrupt_active, cur_event
     if path.isfile('interrupt.temp'):
         with open('interrupt.temp', 'rb') as read_file:
             signal = read_file.read()
+            if signal == b'':
+                return
             if signal == b'x':  # should never happen, but just in case
-                with interrupt_lock:
-                    interrupt_active = False
-                open('interrupt.temp', 'w').close()
-            elif signal == b'm':
+                if interrupt_active:
+                    with interrupt_lock:
+                        interrupt_active = False
+                    open('interrupt.temp', 'w').close()
+            else:
                 with interrupt_lock:
                     interrupt_active = True
-                cur_event = 'interrupt'
-                send_color_str(b'01i0011')  # this is different because if it gets resumed then the program should not re-animate the 'fade-in'
-                # elif signal == b's'
+                if signal == b'm':
+                    send_color_str(b'01i0011')  # this is different because if it gets resumed then the program should not re-animate the 'fade-in'
+                    cur_event = 'movie'
+
+                elif signal == b'z':
+                    send_color_str(b':002,000,000')
+                    cur_event = 'sleep'
+
+                elif signal == b'r':  # relax mode
+                    print('Unimplemented')
+                    cur_event = 'relax'
+
+                elif signal == b's':  # song mode
+                    print('Unimplemented')
+                    # send_color_str(signal)  # TODO Implement on arduino
+                    cur_event = 'music'
+
+                elif signal == b'c':  # custom color
+                    print('Unimplemented')
+                    cur_event = 'color'
+
+                elif signal == b'v':  # custom string
+                    print('Unimplemented')
+                    cur_event = 'string'
 
 
 def sun_event():
-    global sun_keyframes, last_sun_color, cur_event
-
-    cur_event = 'sun'
+    global sun_keyframes, last_sun_color, cur_event, sun_key_count
 
     print('\tFiring sun_event')
     if sun_keyframes:
         color = None
         # this check allows the sun color to change at a different frequency than the global event update frequency
         # and the loop allows the sun event to skip events to find the current sun keyframe
+        data = None
         while sun_keyframes:
             data = sun_keyframes[0]
             time_req = data[0]
@@ -363,17 +423,38 @@ def sun_event():
                 break
 
         if color is not None:
-            last_sun_color = color
+            keyframe_index = data[2]
+            last_sun_color = (color, keyframe_index)
+
+            if keyframe_index <= sun_key_count/4:  # if keyframe is within the first quarter of keyframes
+                cur_event = 'sunrise'
+            elif keyframe_index < sun_key_count * 0.75:  # if keyframe is above first quarter but below last quarter
+                cur_event = 'midday'
+            else:  # if keyframe is within last quarter
+                if keyframe_index == sun_key_count - 1:
+                    cur_event = 'sundown'
+                else:
+                    cur_event = 'sunset'
             send_color_str(color.to_bytes())
         else:
-            send_color_str(last_sun_color.to_bytes())
+            col = last_sun_color[0]
+            ind = last_sun_color[1]
+
+            if ind <= sun_key_count/4:
+                cur_event = 'sunrise'
+            elif ind <= sun_key_count * 0.75:
+                cur_event = 'midday'
+            else:
+                if ind == sun_key_count - 1:
+                    cur_event = 'sundown'
+                else:
+                    cur_event = 'sunset'
+            send_color_str(col.to_bytes())
             # else the queue is empty, do nothing
 
 
 def weather_event():
     global cur_weather, cur_event
-
-    cur_event = 'weather'
 
     print('\tFiring weather_event')
     if 'thunder' in cur_weather.lower():
@@ -386,6 +467,7 @@ def weather_event():
         for _ in range(15):
             str_to_send += b',' + random.choice(chunks)
         send_color_str(str_to_send)
+        cur_event = 'thunder'
 
     if 'rain' in cur_weather.lower():
         # chunks:
@@ -400,6 +482,7 @@ def weather_event():
         for _ in range(15):
             str_to_send += b',' + random.choice(chunks)
         send_color_str(str_to_send)
+        cur_event = 'rain'
 
     if 'snow' in cur_weather.lower():
         # chunks:
@@ -411,6 +494,7 @@ def weather_event():
         for _ in range(15):
             str_to_send += b',' + random.choice(chunks)
         send_color_str(str_to_send)
+        cur_event = 'snow'
 
     else:
         eprint('Unknown weather event: ' + cur_weather)
@@ -426,7 +510,7 @@ def calendar_event():
 
 
 def sports_event():
-    global rangers_won, steelers_won
+    global rangers_won, steelers_won, cur_event
     print('\tFiring sports_event')
 
     # ordered by preference. This list is read left to right so that if multiple teams win, the preferred team is chosen
@@ -440,30 +524,33 @@ def sports_event():
 
     if team == 'rangers':
         send_color_str(b'04f1000,i5000,f1001,i5001')
+        cur_event = 'rangers'
     elif team == 'steelers':
         send_color_str(b'04f1015,i5015,f0207,i5007')
+        cur_event = 'steelers'
     else:
         eprint('Sports event chosen, but no team won a game last night')
 
 
 def stocks_event():
-    global stocks_color_str
+    global stocks_color_str, cur_event
     print('\tFiring stocks_event')
 
     if stocks_color_str is not None:
         send_color_str(stocks_color_str)
     else:
         eprint('Stocks event chosen, but there is no stock color set')
+    cur_event = 'stocks'
 
 
 def generate_sun_keys():
-    global sun_data, sun_colors
+    global sun_data, sun_colors, sun_key_count
 
     keyframes = deque()
     sun_diff = sun_data[1] - sun_data[0]
 
     # One key per hour from rise until set
-    hours_diff = sun_diff.seconds // 3600
+    sun_key_count = hours_diff = sun_diff.seconds // 3600
     if sun_diff.seconds % 3600 // 60 > 30:  # round up to nearest hour
         hours_diff += 1
 
@@ -477,9 +564,9 @@ def generate_sun_keys():
 
     for a in range(rise_key_count - 1):
         hour_req = sun_data[0] + datetime.timedelta(hours=a)  # one keyframe per hour, starting at sunrise
-        keyframes.append((hour_req, sun_colors['rise'] + c_diff.int_mul(a)))
+        keyframes.append((hour_req, sun_colors['rise'] + c_diff.int_mul(a), a))  # append the count so that we can see where we are for image updating
     hour_req = sun_data[0] + datetime.timedelta(hours=rise_key_count - 1)
-    keyframes.append((hour_req, sun_colors['mid']))  # manually set last keyframe in order to actually hit the desired end color
+    keyframes.append((hour_req, sun_colors['mid'], rise_key_count - 1))  # manually set last keyframe in order to actually hit the desired end color
 
     if sun_colors['set'] is None:
         sun_colors['set'] = random_color(dim=True)
@@ -489,9 +576,9 @@ def generate_sun_keys():
 
     for a in range(set_key_count - 1):
         hour_req = sun_data[0] + datetime.timedelta(hours=rise_key_count + a)
-        keyframes.append((hour_req, sun_colors['mid'] + c_diff.int_mul(a)))
+        keyframes.append((hour_req, sun_colors['mid'] + c_diff.int_mul(a), a + rise_key_count))
     hour_req = sun_data[0] + datetime.timedelta(hours=rise_key_count + set_key_count - 1)
-    keyframes.append((hour_req, sun_colors['set']))
+    keyframes.append((hour_req, sun_colors['set'], sun_key_count - 1))
 
     return keyframes
 
