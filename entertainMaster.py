@@ -294,13 +294,17 @@ def accept_info(client_socket):
     client_socket.close()
 
 
-def fire_interrupt(signal):
+def fire_interrupt(signal, resume=False):
     """
     BYTE CODES:
     - m = movie mode
-    - z = sleep mode (unimplemented)
+    - z = sleep mode
     - x = cancel interrupt
-     - s = music mode (unimplemented )
+    - o = off
+    - s = music mode (unimplemented)
+    - r = relax mode (unimplemented)
+    - c = custom color (unimplemented)
+    - v = custom string (unimplemented)
     """
     global interrupt_lock, interrupt_active, cur_event
 
@@ -324,15 +328,21 @@ def fire_interrupt(signal):
             interrupt_active = True
 
         if signal == b'm':
-            send_color_str(b'03f0203,f0206,f0811')
-            time.sleep(3)
-            send_color_str(b'01i0011')
+            if resume:
+                send_color_str(b'01i0011')  # this is different because if it gets resumed then the program should not re-animate the 'fade-in'
+            else:
+                send_color_str(b'03f0203,f0206,f0811')
+                time.sleep(3)
+                send_color_str(b'01i0011')
             cur_event = 'movie'
 
         elif signal == b'z':
-            send_color_str(b'01f0416')
-            time.sleep(2)
-            send_color_str(b':002,000,000')
+            if resume:
+                send_color_str(b':002,000,000')
+            else:
+                send_color_str(b'01f0416')
+                time.sleep(2)
+                send_color_str(b':002,000,000')
             cur_event = 'sleep'
 
         elif signal == b'r':  # relax mode
@@ -362,7 +372,6 @@ def fire_interrupt(signal):
     return cur_event
 
 
-# TODO merge this into fire_interrupt by sending it a "resume = true" boolean to allow for variations
 def resume_interrupt():
     global interrupt_lock, interrupt_active, cur_event
     if path.isfile('interrupt.temp'):
@@ -370,38 +379,8 @@ def resume_interrupt():
             signal = read_file.read()
             if signal == b'':
                 return
-            if signal == b'x':  # should never happen, but just in case
-                if interrupt_active:
-                    with interrupt_lock:
-                        interrupt_active = False
-                    open('interrupt.temp', 'w').close()
             else:
-                with interrupt_lock:
-                    interrupt_active = True
-                if signal == b'm':
-                    send_color_str(b'01i0011')  # this is different because if it gets resumed then the program should not re-animate the 'fade-in'
-                    cur_event = 'movie'
-
-                elif signal == b'z':
-                    send_color_str(b':002,000,000')
-                    cur_event = 'sleep'
-
-                elif signal == b'r':  # relax mode
-                    print('Unimplemented')
-                    cur_event = 'relax'
-
-                elif signal == b's':  # song mode
-                    print('Unimplemented')
-                    # send_color_str(signal)  # TODO Implement on arduino
-                    cur_event = 'music'
-
-                elif signal == b'c':  # custom color
-                    print('Unimplemented')
-                    cur_event = 'color'
-
-                elif signal == b'v':  # custom string
-                    print('Unimplemented')
-                    cur_event = 'string'
+                fire_interrupt(signal, resume=True)
 
 
 def sun_event():
