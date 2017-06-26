@@ -345,12 +345,13 @@ def fire_interrupt(signal, resume=False):
                 send_color_str(b':002,000,000')
             cur_event = 'sleep'
 
+        # TODO Add unimplemented events
         elif signal == b'r':  # relax mode
             print('Unimplemented')
             cur_event = 'relax'
 
         elif signal == b's':  # song mode
-            send_color_str(signal)  # TODO Implement on arduino
+            send_color_str(signal)  # implement on arduino
             cur_event = 'music'
 
         elif signal == b'c':  # custom color
@@ -763,6 +764,7 @@ def send_color_str(col_string: bytes):
 def debug_print():
     global esb_color, sun_data, sun_keyframes, is_init, sun_colors, cur_weather, weather_refresh_t, priorities, cal_event_color_str, \
         DJI_difference, stocks_color_str, steelers_won, rangers_won
+    # TODO Add new global variables to this list
     print('------DEBUG OUT------')
     print('esb_color: ' + str(esb_color))
     print('sun_data[0] (sunrise): ' + str(sun_data[0]))
