@@ -5,7 +5,7 @@ ARDUINO MESSAGE FORMAT:
 :RRR,GGG,BBB                             <-- set new color
 nnXttCC,XttCC,XttCC,XttCC,XttCC,XttCC... <-- program new loop
   nn is number of colors in sequence (max 99)
-  X is 'f' (fade) or 'i' (instant)
+  X is 'f' (fade) or 'i' (instant) or 's' (fade, no loop) or 'c' (instant, no loop)
   tt is time (for 'i': time to wait after switching, in hundreds of millis. For 'f': time between fade steps, in millis)
   CC is a color code (given by position in states[])
   Loops repeat until another sequence is read in
@@ -269,7 +269,7 @@ def update_event_data():
 # Could possibly be multithreaded, but with a 15 minute main loop refresh time, it isn't really competing for resources.
 def pc_listener():
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind((socket.gethostbyname(socket.gethostname()), 8493))
+    server_socket.bind((socket.gethostbyname('192.168.1.8'), 8493))
     server_socket.listen(5)
     print("This program's server:port | " + str(socket.gethostbyname(socket.gethostname())) + ':' + '8493')
 
@@ -280,14 +280,32 @@ def pc_listener():
 
 
 def accept_info(client_socket):
-    global interrupt_lock, interrupt_active
+    global interrupt_lock, interrupt_active, cur_event
     print('Received client message: ')
 
     msg = client_socket.recv(1)
     print('\t', msg, sep='')
     if msg == b'1':  # status update request
+        print('cur_event: %s' % cur_event)
         client_socket.sendall(cur_event.encode('UTF-8'))
-    else:
+
+    elif msg == b'c':  # custom color code
+        msg = bytearray(client_socket.recv(12))
+        if len(msg) == 12:
+            print('received custom color: %s' % msg)
+            fire_interrupt(b'c%s' % msg)
+        else:
+            print('Invalid custom color: %s' % msg)
+
+    elif msg == b'v':  # custom string
+        msg = client_socket.recv(1024)  # max length is 595 (99 chunks minus 1 comma plus 'nn')
+        if len(msg) >= 7:  # nnXttCC is the minimum
+            print('received custom string: %s' % msg)
+            fire_interrupt(b'v%s' % msg)
+        else:
+            print('Invalid custom string: %s' % msg)
+
+    else:  # must be an interrupt
         response = fire_interrupt(msg)
         client_socket.sendall(response.encode('UTF-8'))
         print('sent event: %s' % response)
@@ -329,20 +347,16 @@ def fire_interrupt(signal, resume=False):
 
         if signal == b'm':
             if resume:
-                send_color_str(b'01i0011')  # this is different because if it gets resumed then the program should not re-animate the 'fade-in'
+                send_color_str(b':008,002,000')  # this is different because if it gets resumed then the program should not re-animate the 'fade-in'
             else:
-                send_color_str(b'03f0203,f0206,f0811')
-                time.sleep(3)
-                send_color_str(b'01i0011')
+                send_color_str(b'03s0203,f0206,f0811')
             cur_event = 'movie'
 
         elif signal == b'z':
             if resume:
                 send_color_str(b':002,000,000')
             else:
-                send_color_str(b'01f0416')
-                time.sleep(2)
-                send_color_str(b':002,000,000')
+                send_color_str(b'01s0416')
             cur_event = 'sleep'
 
         # TODO Add unimplemented events
@@ -354,12 +368,12 @@ def fire_interrupt(signal, resume=False):
             send_color_str(signal)  # implement on arduino
             cur_event = 'music'
 
-        elif signal == b'c':  # custom color
-            print('Unimplemented')
+        elif signal[0] == 99:  # (c) custom color
+            send_color_str(signal[1:])
             cur_event = 'color'
 
-        elif signal == b'v':  # custom string
-            print('Unimplemented')
+        elif signal[0] == 118:  # (v) custom string
+            send_color_str(signal[1:])
             cur_event = 'string'
 
         elif signal == b'o':

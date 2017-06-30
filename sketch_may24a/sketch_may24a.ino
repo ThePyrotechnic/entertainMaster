@@ -79,8 +79,8 @@ void loop() {
     if (in[0] == ':') { // requesting a direct color
       stringSet(in, 0);
     }
-    else if (in[2] == 'f' || in[2] == 'i') { // requesting a custom program
-      // 'f' = fade, 'i' = instant
+    else if (in[2] == 'f' || in[2] == 'i' || in[2] == 's' || in[2] == 'c') { // requesting a custom program
+      // 'f' = fade, 'i' = instant, 's' = single (fade, no loop), 'c' = single (instant, no loop)
       char colsStr[2];
       memcpy(colsStr, &in, 2);
       numCols = (byte)atoi(colsStr);
@@ -88,8 +88,9 @@ void loop() {
       char lightData[6]; // size of one light setting (a single 'chunk')
 
       byte next = 2; // location of next chunk in the 'in' string
-
-      while (Serial.available() == 0) {
+      byte single = 0;
+      
+      while (Serial.available() == 0 && !single) {
         for (int a = 0; a < numCols; a++) {
           memcpy(lightData, &in[next], 5);
           lightData[5] = '\0';
@@ -98,6 +99,8 @@ void loop() {
           parseSplit(lightData);
         }
         next = 2;
+        if (in[2] == 's' || in[2] == 'c')
+          single = 1;
       }
     }
   }
@@ -120,7 +123,7 @@ void parseSplit(char* split) {
   memcpy(col, &split[3],2);
   col[2] = '\0';
   
-  if (split[0] == 'f') fade(states[atoi(col)], atoi(interval));
+  if (split[0] == 'f' || split[0] == 's') fade(states[atoi(col)], atoi(interval));
   else stringSet(states[atoi(col)], atoi(interval) * 100); //split[0] should be i // Range of interval * 100 is 100 - 9900 millis
 }
 
