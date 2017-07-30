@@ -22,4 +22,4 @@ with open("Output.txt", "w", encoding='UTF-8') as text_file:
             #if "|" in line[3]:
             #    line[3] = line[3][line[3].index("|") + 1:]
             # noinspection PyTypeChecker
-            print(name + "," + str(r) + "," + str(g) + "," + str(blu), file=text_file)
+            print(name, r, g, blu, sep=',', file=text_file)
