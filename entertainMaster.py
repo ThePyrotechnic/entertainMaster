@@ -69,8 +69,9 @@ class Color:
     def to_bytes(self):
         return b':%03d,%03d,%03d' % (self.r, self.g, self.b)
 
+    @property
     def not_white(self):
-        return True if self.r and self.g and self.b != 255 else False
+        return self.r and self.g and self.b != 255
 
     @classmethod
     def from_tuple(cls, rgb: tuple):
@@ -99,27 +100,21 @@ class Color:
     def __sub__(self, o):
         return Color(self.r - o.r, self.g - o.g, self.b - o.b)
 
+    def __mul__(self, o): 
+        return self.int_mul(o)
+      
+    def __div__(self, o):
+        return self.int_div(o)
+      
     def int_mul(self, o):
         return Color(self.r * o, self.g * o, self.b * o)
 
     def int_div(self, o):
-        if self.r < 0:
-            r = int(math.ceil(self.r / o))
-        else:
-            r = self.r // o
-
-        if self.g < 0:
-            g = int(math.ceil(self.g / o))
-        else:
-            g = self.g // o
-
-        if self.b < 0:
-            b = int(math.ceil(self.b / o))
-        else:
-            b = self.b // o
-
-        return Color(r, g, b)
-
+        return Color(
+            r = math.ceil(self.r / o) if self.r < 0 else self.r // 0,
+            g = math.ceil(self.g / o) if self.g < 0 else self.g // 0,
+            b = math.ceil(self.b / o) if self.b < 0 else self.b // 0,
+        )
 
 # globals TODO describe variable structure
 arduino = None
@@ -641,7 +636,7 @@ def fetch_esb_color():
 
     for flavor in flavor_str.split(' '):
         color = colors.get(flavor.lower().rstrip(".,\\\'\""))
-        if color and color.not_white():
+        if color and color.not_white:
             return color
     return None
 
