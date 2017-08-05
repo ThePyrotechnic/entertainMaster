@@ -70,9 +70,9 @@ class Color:
         return b':%03d,%03d,%03d' % (self.r, self.g, self.b)
 
     @property
-    def not_white(self):
-        return self.r and self.g and self.b != 255
-
+    def is_white(self):
+        return (self.r, self.g, self.b) == (0, 0, 0xFF)
+      
     @classmethod
     def from_tuple(cls, rgb: tuple):
         warnings.warn('from_list and from_tuple methods are deprecated.'
@@ -636,7 +636,7 @@ def fetch_esb_color():
 
     for flavor in flavor_str.split(' '):
         color = colors.get(flavor.lower().rstrip(".,\\\'\""))
-        if color and color.not_white:
+        if color and not color.is_white:
             return color
     return None
 
