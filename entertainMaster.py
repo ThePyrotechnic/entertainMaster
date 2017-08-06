@@ -36,7 +36,6 @@ from __future__ import print_function
 
 from collections import deque
 import datetime
-import math
 from os import path
 import random
 import re
@@ -61,6 +60,8 @@ class Color:
     __slots__ = ('r', 'g', 'b')
     
     def __init__(self, r: int, g: int, b: int):
+        for x in (r, g, b):
+            assert 0 <= x <= 0xFF, 'All fields must be between 0 and 255'
         self.r = r
         self.g = g
         self.b = b
@@ -105,10 +106,14 @@ class Color:
     # meant to be used only when adding fractional color diffs 
     # See also: sun rise/set
     def __add__(self, other):
-        return Color(self.r + other.r, self.g + other.g, self.b + other.b)
+        return Color(min(self.r + other.r, 0xFF), 
+                     min(self.g + other.g, 0xFF),
+                     min(self.b + other.b, 0xFF))
 
     def __sub__(self, other):
-        return Color(self.r - other.r, self.g - other.g, self.b - other.b)
+        return Color(max(self.r - other.r, 0),
+                     max(self.g - other.g, 0),
+                     max(self.b - other.b, 0))
 
     def __mul__(self, other): 
         return self.int_mul(other)
@@ -119,12 +124,8 @@ class Color:
     def int_mul(self, other):
         return Color(self.r * other, self.g * other, self.b * other)
 
-    def int_div(self, o):
-        return Color(
-            r = math.ceil(self.r / o) if self.r < 0 else self.r // 0,
-            g = math.ceil(self.g / o) if self.g < 0 else self.g // 0,
-            b = math.ceil(self.b / o) if self.b < 0 else self.b // 0,
-        )
+    def int_div(self, other):
+        return Color(self.r // other, self.g // other, self.b // other)
 
       
 WHITE = Color(0xFF, 0xFF, 0xFF)
