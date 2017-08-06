@@ -58,6 +58,8 @@ class Color:
     """
     Convenience class for the representation of colors.
     """
+    __slots__ = ('r', 'g', 'b')
+    
     def __init__(self, r: int, g: int, b: int):
         self.r = r
         self.g = g
@@ -66,7 +68,7 @@ class Color:
     def __str__(self):
         return 'r: %d g: %d b: %d' % (self.r, self.g, self.b)
 
-    def to_bytes(self):
+    def __bytes__(self):
         return b':%03d,%03d,%03d' % (self.r, self.g, self.b)
 
     def __eq__(self, other):
@@ -78,6 +80,9 @@ class Color:
             return int(self) == other
         return NotImplemented
 
+    def __int__(self):
+        return 0x010000 * self.r + 0x0100 * self.g + self.b
+      
     @classmethod
     def from_tuple(cls, rgb: tuple):
         warnings.warn('from_list and from_tuple methods are deprecated.'
@@ -122,7 +127,7 @@ class Color:
         )
 
       
-WHITE = Color(0, 0, 0xFF)
+WHITE = Color(0xFF, 0xFF, 0xFF)
       
   
 # globals TODO describe variable structure
@@ -435,7 +440,7 @@ def sun_event():
                     cur_event = 'sundown'
                 else:
                     cur_event = 'sunset'
-            send_color_str(color.to_bytes())
+            send_color_str(bytes(color))
         else:
             col = last_sun_color[0]
             ind = last_sun_color[1]
@@ -449,7 +454,7 @@ def sun_event():
                     cur_event = 'sundown'
                 else:
                     cur_event = 'sunset'
-            send_color_str(col.to_bytes())
+            send_color_str(bytes(col))
             # else the queue is empty, do nothing
 
 
