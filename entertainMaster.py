@@ -36,6 +36,7 @@ from __future__ import print_function
 
 from collections import deque
 import datetime
+import math
 from os import path
 import random
 import re
@@ -540,29 +541,25 @@ def generate_sun_keys():
     if sun_diff.seconds % 3600 // 60 > 30:  # round up to nearest hour
         hours_diff += 1
 
-    rise_key_count = hours_diff // 2
+    rise_key_count = math.ceil(hours_diff / 2)
     set_key_count = hours_diff // 2
-    if rise_key_count * 2 != hours_diff:  # correct int division
-        rise_key_count += 1
-
-    c_diff = sun_colors['mid'] - sun_colors['rise']
-    c_diff = c_diff.int_div(rise_key_count - 1)
+    
+    c_diff = (sun_colors['mid'] - sun_colors['rise']) / (rise_key_count - 1)
 
     for a in range(rise_key_count - 1):
         hour_req = sun_data[0] + datetime.timedelta(hours=a)  # one keyframe per hour, starting at sunrise
-        keyframes.append((hour_req, sun_colors['rise'] + c_diff.int_mul(a), a))  # append the count so that we can see where we are for image updating
+        keyframes.append((hour_req, sun_colors['rise'] + c_diff * a, a))  # append the count so that we can see where we are for image updating
     hour_req = sun_data[0] + datetime.timedelta(hours=rise_key_count - 1)
     keyframes.append((hour_req, sun_colors['mid'], rise_key_count - 1))  # manually set last keyframe in order to actually hit the desired end color
 
     if sun_colors['set'] is None:
         sun_colors['set'] = random_color(dim=True)
 
-    c_diff = sun_colors['set'] - sun_colors['mid']
-    c_diff = c_diff.int_div(set_key_count - 1)
+    c_diff = (sun_colors['set'] - sun_colors['mid']) / (set_key_count - 1)
 
     for a in range(set_key_count - 1):
         hour_req = sun_data[0] + datetime.timedelta(hours=rise_key_count + a)
-        keyframes.append((hour_req, sun_colors['mid'] + c_diff.int_mul(a), a + rise_key_count))
+        keyframes.append((hour_req, sun_colors['mid'] + c_diff * a, a + rise_key_count))
     hour_req = sun_data[0] + datetime.timedelta(hours=rise_key_count + set_key_count - 1)
     keyframes.append((hour_req, sun_colors['set'], sun_key_count - 1))
 
