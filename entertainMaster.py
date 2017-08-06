@@ -44,7 +44,6 @@ from string import punctuation
 import sys
 import threading
 import time
-import warnings
 
 from bs4 import BeautifulSoup
 import requests
@@ -83,26 +82,7 @@ class Color:
 
     def __int__(self):
         return 0x010000 * self.r + 0x0100 * self.g + self.b
-      
-    @classmethod
-    def from_tuple(cls, rgb: tuple):
-        warnings.warn('from_list and from_tuple methods are deprecated.'
-                      'Use Color(*rgb) instead.')
-        r = rgb[0]
-        g = rgb[1]
-        b = rgb[2]
-        return cls(r, g, b)
 
-    @classmethod
-    def from_list(cls, rgb: list):
-        warnings.warn('from_list and from_tuple methods are deprecated.'
-                      'Use Color(*rgb) instead.')
-        r = rgb[0]
-        g = rgb[1]
-        b = rgb[2]
-        return cls(r, g, b)
-
-    # add and sub methods will over/underflow
     # meant to be used only when adding fractional color diffs 
     # See also: sun rise/set
     def __add__(self, other):
