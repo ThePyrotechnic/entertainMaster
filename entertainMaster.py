@@ -96,19 +96,13 @@ class Color:
                      max(self.g - other.g, 0),
                      max(self.b - other.b, 0))
 
-    def __mul__(self, other): 
-        return self.int_mul(other)
-      
-    def __div__(self, other):
-        return self.int_div(other)
-      
-    def int_mul(self, other):
+    def __mul__(self, other: int): 
         return Color(self.r * other, self.g * other, self.b * other)
-
-    def int_div(self, other):
+      
+    def __div__(self, other: int):
         return Color(self.r // other, self.g // other, self.b // other)
 
-      
+
 WHITE = Color(0xFF, 0xFF, 0xFF)
       
   
