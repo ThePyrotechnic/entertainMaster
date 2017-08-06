@@ -765,25 +765,26 @@ def send_color_str(col_string: bytes):
 
 
 def debug_print():
-    global esb_color, sun_data, sun_keyframes, is_init, sun_colors, cur_weather, weather_refresh_t, priorities, cal_event_color_str, \
-        DJI_difference, stocks_color_str, steelers_won, rangers_won
-    # TODO Add new global variables to this list
-    print('------DEBUG OUT------')
-    print('esb_color: ' + str(esb_color))
-    print('sun_data[0] (sunrise): ' + str(sun_data[0]))
-    print('sun_data[1] (sunset): ' + str(sun_data[1]))
-    print('sun_keyframes: ' + str(sun_keyframes))
-    print('sun_colors[\'set\']: ' + str(sun_colors['set']))
-    print('cal_event_color_str: ' + str(cal_event_color_str))
-    print('cur_weather: ' + cur_weather + '(is_init: ' + str(is_init) + ')')
-    print('weather_refresh_t: ' + str(weather_refresh_t))
-    print('DJI_difference: ' + str(DJI_difference))
-    print('stocks_color_str: ' + str(stocks_color_str))
-    print('steelers_won: ' + str(steelers_won))
-    print('rangers_won: ' + str(rangers_won))
-    print('priorities: ' + str(priorities))
-    print('---------------------------')
-
+    """
+    Print key global variables.
+    """
+    print('''
+    ----------DEBUG OUT----------
+    esb_color: {esb_color}
+    sun_data[0] (sunrise): {sun_data[0]}
+    sun_data[1] (sunset): {sun_data[1]}
+    sun_keyframes: {sun_keyframes}
+    sun_colors['set'] = {sun_set_color}
+    cal_event_color_str: {cal_event_color_str}
+    cur_weather: {cur_weather} (is_init: {is_init})
+    weather_refresh_t: {weather_refresh_t}
+    DJI_difference: {DJI_difference}
+    stocks_color_str: {stocks_color_str}
+    steelers_won: {steelers_won}
+    rangers_won: {rangers_won}
+    priorities: {priorities}
+    -----------------------------
+    '''.format(**globals(), sun_set_color=sun_colors['set']))
 
 if __name__ == '__main__':
     tr = threading.Thread(target=pc_listener, daemon=True)
