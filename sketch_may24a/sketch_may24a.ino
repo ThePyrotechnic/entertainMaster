@@ -7,7 +7,7 @@
 // nnXttCC,XttCC,XttCC,XttCC,XttCC,XttCC... <-- program new loop
 #define INPUT_LEN 595 
 //nn is number of colors in sequence (max 99)
-//X is 'f' (fade) or 'i' (instant)
+//X is 'f' (fade) or 'i' (instant) or 's' (fade, no loop) or 'c' (instant, no loop)
 //tt is time (for 'i': time to wait after switching, in hundreds of millis. For 'f': time between fade steps, in millis)
 //CC is a color code (given by position in states[])
 
@@ -30,6 +30,7 @@
 //       15 YLW - Yellow
 //       16 DRE - Dim Red
 //       17 BLD - Blue, Diabetes
+//       18 DPN - Dim Pink
 const char* RED = ":255,000,000";
 const char* BLU = ":000,000,255";
 const char* GRN = ":000,255,000";
@@ -45,11 +46,12 @@ const char* MOV = ":008,002,000";
 const char* DPR = ":025,000,005";
 const char* DGR = ":000,025,000";
 const char* BRN = ":255,030,004";
-const char* YLW = ":255,160,000";
+const char* YLW = ":255,070,000";
 const char* DRE = ":002,000,000";
 const char* BLD = ":060,000,255";
+const char* DPN = ":012,000,001";
 // must also add new macros to array
-const char* const states[] = {RED, BLU, GRN, WHT, PRP, PNK, ONG, OFF, LBL, DBL, DWH, MOV, DPR, DGR, BRN, YLW, DRE, BLD}; 
+const char* const states[] = {RED, BLU, GRN, WHT, PRP, PNK, ONG, OFF, LBL, DBL, DWH, MOV, DPR, DGR, BRN, YLW, DRE, BLD, DPN}; 
 
 //global current light values
 byte red = 0;
@@ -73,10 +75,10 @@ void setup() {
 }
 
 void loop() {
-  if (msg) {
+if (msg) {
     msg = 0;
 
-    if (in[0] == ':') { // requesting a direct color
+  if (in[0] == ':') { // requesting a direct color
       stringSet(in, 0);
     }
     else if (in[2] == 'f' || in[2] == 'i' || in[2] == 's' || in[2] == 'c') { // requesting a custom program

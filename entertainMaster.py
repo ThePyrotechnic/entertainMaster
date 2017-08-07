@@ -28,6 +28,7 @@ nnXttCC,XttCC,XttCC,XttCC,XttCC,XttCC... <-- program new loop
       15 YLW - Yellow
       16 DRE - Dim Red
       17 BLD - Blue, Diabetes
+      18 DPN - Dim Pink
 ex:
 (purple) :200,000,050
 (thunderstorm) 10f0501,i5001,i0103,f0201,i0103,f0201,i3001,10203,f0201,i6001
@@ -58,7 +59,7 @@ class Color:
     Convenience class for the representation of colors.
     """
     __slots__ = ('r', 'g', 'b')
-    
+
     def __init__(self, r: int, g: int, b: int):
         for x in (r, g, b):
             assert 0 <= x <= 0xFF, 'All fields must be between 0 and 255'
@@ -87,7 +88,7 @@ class Color:
     # meant to be used only when adding fractional color diffs 
     # See also: sun rise/set
     def __add__(self, other):
-        return Color(min(self.r + other.r, 0xFF), 
+        return Color(min(self.r + other.r, 0xFF),
                      min(self.g + other.g, 0xFF),
                      min(self.b + other.b, 0xFF))
 
@@ -100,9 +101,9 @@ class Color:
         if other < 0:
             raise ValueError('Cannot multiply a Color by a negative number.')
         return Color(min(self.r * other, 255),
-                     min(self.g * other, 255), 
+                     min(self.g * other, 255),
                      min(self.b * other, 255))
-      
+
     def __div__(self, other: int):
         if other < 0:
             raise ValueError('Cannot divide a Color by a negative number.')
@@ -110,8 +111,8 @@ class Color:
 
 
 WHITE = Color(0xFF, 0xFF, 0xFF)
-      
-  
+
+
 # globals TODO describe variable structure
 arduino = None
 bus_lock = threading.Lock()
@@ -272,37 +273,34 @@ def pc_listener():
         ct.run()
 
 
-def accept_info(client_socket):
+def accept_info(msg, server_socket):
     global interrupt_lock, interrupt_active, cur_event
     print('Received client message: ')
-
-    msg = client_socket.recv(1)
     print('\t', msg, sep='')
-    if msg == b'1':  # status update request
+    if msg[:1] == b'1':  # status update request
         print('cur_event: %s' % cur_event)
-        client_socket.sendall(cur_event.encode('UTF-8'))
+        server_socket.sendall(cur_event.encode('UTF-8'))
 
-    elif msg == b'c':  # custom color code
-        msg = bytearray(client_socket.recv(12))
-        if len(msg) == 12:
+    elif msg[:1] == b'c':  # custom color code
+        if len(msg) == 13:
             print('received custom color: %s' % msg)
-            fire_interrupt(b'c%s' % msg)
+            fire_interrupt(msg)
+            server_socket.sendall(cur_event.encode('UTF-8'))
         else:
             print('Invalid custom color: %s' % msg)
 
-    elif msg == b'v':  # custom string
-        msg = client_socket.recv(1024)  # max length is 595 (99 chunks minus 1 comma plus 'nn')
-        if len(msg) >= 7:  # nnXttCC is the minimum
+    elif msg[:1] == b'v':  # custom string
+        if len(msg) >= 8:  # vnnXttCC is the minimum length. max length is 595 (99 chunks minus 1 comma plus 'nn')
             print('received custom string: %s' % msg)
-            fire_interrupt(b'v%s' % msg)
+            fire_interrupt(b'v' + msg)
         else:
             print('Invalid custom string: %s' % msg)
 
     else:  # must be an interrupt
         response = fire_interrupt(msg)
-        client_socket.sendall(response.encode('UTF-8'))
+        server_socket.sendall(response.encode('UTF-8'))
         print('sent event: %s' % response)
-    client_socket.close()
+    server_socket.close()
 
 
 def fire_interrupt(signal, resume=False):
@@ -330,7 +328,7 @@ def fire_interrupt(signal, resume=False):
             t.start()
 
             while cur_event is None:  # wait for event_master thread to create a new event. Potentially unsafe. TODO test this
-                time.sleep(2)
+                time.sleep(0.5)
 
             return cur_event
 
@@ -358,7 +356,8 @@ def fire_interrupt(signal, resume=False):
             cur_event = 'relax'
 
         elif signal == b's':  # song mode
-            send_color_str(signal)  # implement on arduino
+            print('Unimplemented')
+            # send_color_str(signal)  # implement on arduino
             cur_event = 'music'
 
         elif signal[0] == 99:  # (c) custom color
@@ -543,7 +542,7 @@ def generate_sun_keys():
 
     rise_key_count = math.ceil(hours_diff / 2)
     set_key_count = hours_diff // 2
-    
+
     c_diff = (sun_colors['mid'] - sun_colors['rise']) / (rise_key_count - 1)
 
     for a in range(rise_key_count - 1):
@@ -585,7 +584,7 @@ def random_color(from_table: bool = False, bright: bool = False, dim: bool = Fal
     elif dim:
         # make sure no colors are too bright, and turn off one color
         quarter_brightness = 63
-        r_color = [random.randint(1, quarter_brightness) if val > 150 else val 
+        r_color = [random.randint(1, quarter_brightness) if val > 150 else val
                    for val in r_color]
         r_color[random.randint(0, 2)] = 0
     return Color(*r_color)
