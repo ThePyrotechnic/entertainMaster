@@ -96,10 +96,16 @@ class Color:
                      max(self.g - other.g, 0),
                      max(self.b - other.b, 0))
 
-    def __mul__(self, other: int): 
-        return Color(self.r * other, self.g * other, self.b * other)
+    def __mul__(self, other: int):
+        if other < 0:
+            raise ValueError('Cannot multiply a Color by a negative number.')
+        return Color(min(self.r * other, 255),
+                     min(self.g * other, 255), 
+                     min(self.b * other, 255))
       
     def __div__(self, other: int):
+        if other < 0:
+            raise ValueError('Cannot divide a Color by a negative number.')
         return Color(self.r // other, self.g // other, self.b // other)
 
 
