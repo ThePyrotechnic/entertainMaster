@@ -10,16 +10,16 @@ nnXttCC,XttCC,XttCC,XttCC,XttCC,XttCC... <-- program new loop
   CC is a color code (given by position in states[])
   Loops repeat until another sequence is read in
   COLOR TABLE:
-      0   RED
-      1   BLU
-      2   GRN
-      3   WHT
-      4   PRP
-      5   PNK
-      6   ONG
-      7   OFF
-      8   LBL - Light Blue
-      9   DBL - Dim Blue
+      0  RED
+      1  BLU
+      2  GRN
+      3  WHT
+      4  PRP
+      5  PNK
+      6  ONG
+      7  OFF
+      8  LBL - Light Blue
+      9  DBL - Dim Blue
       10 DWH - Dim White
       11 MOV - Movie Orange
       12 DPR - Dim Purple
@@ -32,7 +32,6 @@ ex:
 (purple) :200,000,050
 (thunderstorm) 10f0501,i5001,i0103,f0201,i0103,f0201,i3001,10203,f0201,i6001
 """
-
 from __future__ import print_function
 
 from collections import deque
@@ -42,10 +41,10 @@ from os import path
 import random
 import re
 import socket
+from string import punctuation
 import sys
 import threading
 import time
-import warnings
 
 from bs4 import BeautifulSoup
 import requests
@@ -58,7 +57,11 @@ class Color:
     """
     Convenience class for the representation of colors.
     """
+    __slots__ = ('r', 'g', 'b')
+    
     def __init__(self, r: int, g: int, b: int):
+        for x in (r, g, b):
+            assert 0 <= x <= 0xFF, 'All fields must be between 0 and 255'
         self.r = r
         self.g = g
         self.b = b
@@ -66,61 +69,49 @@ class Color:
     def __str__(self):
         return 'r: %d g: %d b: %d' % (self.r, self.g, self.b)
 
-    def to_bytes(self):
+    def __bytes__(self):
         return b':%03d,%03d,%03d' % (self.r, self.g, self.b)
 
-    def not_white(self):
-        return True if self.r and self.g and self.b != 255 else False
+    def __eq__(self, other):
+        if self is other:
+            return True
+        elif isinstance(other, Color):
+            return self.r == other.r and self.g == other.g and self.b == other.b
+        elif isinstance(other, int):
+            return int(self) == other
+        return NotImplemented
 
-    @classmethod
-    def from_tuple(cls, rgb: tuple):
-        warnings.warn('from_list and from_tuple methods are deprecated.'
-                      'Use Color(*rgb) instead.')
-        r = rgb[0]
-        g = rgb[1]
-        b = rgb[2]
-        return cls(r, g, b)
+    def __int__(self):
+        return 0x010000 * self.r + 0x0100 * self.g + self.b
 
-    @classmethod
-    def from_list(cls, rgb: list):
-        warnings.warn('from_list and from_tuple methods are deprecated.'
-                      'Use Color(*rgb) instead.')
-        r = rgb[0]
-        g = rgb[1]
-        b = rgb[2]
-        return cls(r, g, b)
-
-    # add and sub methods will over/underflow
     # meant to be used only when adding fractional color diffs 
     # See also: sun rise/set
-    def __add__(self, o):
-        return Color(self.r + o.r, self.g + o.g, self.b + o.b)
+    def __add__(self, other):
+        return Color(min(self.r + other.r, 0xFF), 
+                     min(self.g + other.g, 0xFF),
+                     min(self.b + other.b, 0xFF))
 
-    def __sub__(self, o):
-        return Color(self.r - o.r, self.g - o.g, self.b - o.b)
+    def __sub__(self, other):
+        return Color(max(self.r - other.r, 0),
+                     max(self.g - other.g, 0),
+                     max(self.b - other.b, 0))
 
-    def int_mul(self, o):
-        return Color(self.r * o, self.g * o, self.b * o)
-
-    def int_div(self, o):
-        if self.r < 0:
-            r = int(math.ceil(self.r / o))
-        else:
-            r = self.r // o
-
-        if self.g < 0:
-            g = int(math.ceil(self.g / o))
-        else:
-            g = self.g // o
-
-        if self.b < 0:
-            b = int(math.ceil(self.b / o))
-        else:
-            b = self.b // o
-
-        return Color(r, g, b)
+    def __mul__(self, other: int):
+        if other < 0:
+            raise ValueError('Cannot multiply a Color by a negative number.')
+        return Color(min(self.r * other, 255),
+                     min(self.g * other, 255), 
+                     min(self.b * other, 255))
+      
+    def __div__(self, other: int):
+        if other < 0:
+            raise ValueError('Cannot divide a Color by a negative number.')
+        return Color(self.r // other, self.g // other, self.b // other)
 
 
+WHITE = Color(0xFF, 0xFF, 0xFF)
+      
+  
 # globals TODO describe variable structure
 arduino = None
 bus_lock = threading.Lock()
@@ -254,14 +245,14 @@ def update_event_data():
 
     today = datetime.datetime.today()
 
-    t_since_last_weather = today - weather_refresh_t
-    if t_since_last_weather > weather_refresh:
+    time_since_last_weather = today - weather_refresh_t
+    if time_since_last_weather > weather_refresh:
         print('Refreshing weather...')
         cur_weather = fetch_weather_data()  # TODO Uncomment this when not testing weather
         weather_refresh_t = datetime.datetime.today()
 
-    # check Dow Jones after NASDAQ closes at 4:00PM
-    if not_fetched_stocks and today.hour >= 16:
+    nasdaq_close = four_pm = 16
+    if not_fetched_stocks and today.hour >= nasdaq_close:
         fetch_stock_data()
         not_fetched_stocks = False  # only fetch once
 
@@ -271,7 +262,9 @@ def pc_listener():
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.bind((socket.gethostbyname('192.168.1.8'), 8493))
     server_socket.listen(5)
-    print("This program's server:port | " + str(socket.gethostbyname(socket.gethostname())) + ':' + '8493')
+    host = socket.gethostbyname(socket.gethostname())
+    port = 8493
+    print("This program's server:port | %s:%d" % (host, port))
 
     while True:
         (client_socket, address) = server_socket.accept()
@@ -382,16 +375,16 @@ def fire_interrupt(signal, resume=False):
 
     # saves interrupt state to be resumed if program restarts
     # (i.e if restarts at midnight during a movie)
-    with open('interrupt.temp', 'wb') as text_file:
-        text_file.write(signal)
+    with open('interrupt.temp', 'wb') as interrupt_state:
+        interrupt_state.write(signal)
     return cur_event
 
 
 def resume_interrupt():
     global interrupt_lock, interrupt_active, cur_event
     if path.isfile('interrupt.temp'):
-        with open('interrupt.temp', 'rb') as read_file:
-            signal = read_file.read()
+        with open('interrupt.temp', 'rb') as interrupt_state:
+            signal = interrupt_state.read()
             if signal == b'':
                 return
             else:
@@ -429,7 +422,7 @@ def sun_event():
                     cur_event = 'sundown'
                 else:
                     cur_event = 'sunset'
-            send_color_str(color.to_bytes())
+            send_color_str(bytes(color))
         else:
             col = last_sun_color[0]
             ind = last_sun_color[1]
@@ -443,7 +436,7 @@ def sun_event():
                     cur_event = 'sundown'
                 else:
                     cur_event = 'sunset'
-            send_color_str(col.to_bytes())
+            send_color_str(bytes(col))
             # else the queue is empty, do nothing
 
 
@@ -548,29 +541,25 @@ def generate_sun_keys():
     if sun_diff.seconds % 3600 // 60 > 30:  # round up to nearest hour
         hours_diff += 1
 
-    rise_key_count = hours_diff // 2
+    rise_key_count = math.ceil(hours_diff / 2)
     set_key_count = hours_diff // 2
-    if rise_key_count * 2 != hours_diff:  # correct int division
-        rise_key_count += 1
-
-    c_diff = sun_colors['mid'] - sun_colors['rise']
-    c_diff = c_diff.int_div(rise_key_count - 1)
+    
+    c_diff = (sun_colors['mid'] - sun_colors['rise']) / (rise_key_count - 1)
 
     for a in range(rise_key_count - 1):
         hour_req = sun_data[0] + datetime.timedelta(hours=a)  # one keyframe per hour, starting at sunrise
-        keyframes.append((hour_req, sun_colors['rise'] + c_diff.int_mul(a), a))  # append the count so that we can see where we are for image updating
+        keyframes.append((hour_req, sun_colors['rise'] + c_diff * a, a))  # append the count so that we can see where we are for image updating
     hour_req = sun_data[0] + datetime.timedelta(hours=rise_key_count - 1)
     keyframes.append((hour_req, sun_colors['mid'], rise_key_count - 1))  # manually set last keyframe in order to actually hit the desired end color
 
     if sun_colors['set'] is None:
         sun_colors['set'] = random_color(dim=True)
 
-    c_diff = sun_colors['set'] - sun_colors['mid']
-    c_diff = c_diff.int_div(set_key_count - 1)
+    c_diff = (sun_colors['set'] - sun_colors['mid']) / (set_key_count - 1)
 
     for a in range(set_key_count - 1):
         hour_req = sun_data[0] + datetime.timedelta(hours=rise_key_count + a)
-        keyframes.append((hour_req, sun_colors['mid'] + c_diff.int_mul(a), a + rise_key_count))
+        keyframes.append((hour_req, sun_colors['mid'] + c_diff * a, a + rise_key_count))
     hour_req = sun_data[0] + datetime.timedelta(hours=rise_key_count + set_key_count - 1)
     keyframes.append((hour_req, sun_colors['set'], sun_key_count - 1))
 
@@ -595,9 +584,9 @@ def random_color(from_table: bool = False, bright: bool = False, dim: bool = Fal
             r_color[random.randint(0, 2)] = 200
     elif dim:
         # make sure no colors are too bright, and turn off one color
-        for a, val in enumerate(r_color):
-            if val > 150:
-                r_color[a] = random.randint(1, 63)  # 63 is ~25% brightness
+        quarter_brightness = 63
+        r_color = [random.randint(1, quarter_brightness) if val > 150 else val 
+                   for val in r_color]
         r_color[random.randint(0, 2)] = 0
     return Color(*r_color)
 
@@ -637,11 +626,11 @@ def fetch_esb_color():
 
     c = res.content
     data = BeautifulSoup(c, 'html.parser')
-    flavor_str = str(data.find('p', 'lighting-desc').string).lstrip('\n ')
+    lighting_description = str(data.find('p', 'lighting-desc').string).lstrip('\n ')
 
-    for flavor in flavor_str.split(' '):
-        color = colors.get(flavor.lower().rstrip(".,\\\'\""))
-        if color and color.not_white():
+    for word in lighting_description.split(' '):
+        color = colors.get(word.lower().rstrip(punctuation))
+        if color and color != WHITE:
             return color
     return None
 
@@ -776,25 +765,26 @@ def send_color_str(col_string: bytes):
 
 
 def debug_print():
-    global esb_color, sun_data, sun_keyframes, is_init, sun_colors, cur_weather, weather_refresh_t, priorities, cal_event_color_str, \
-        DJI_difference, stocks_color_str, steelers_won, rangers_won
-    # TODO Add new global variables to this list
-    print('------DEBUG OUT------')
-    print('esb_color: ' + str(esb_color))
-    print('sun_data[0] (sunrise): ' + str(sun_data[0]))
-    print('sun_data[1] (sunset): ' + str(sun_data[1]))
-    print('sun_keyframes: ' + str(sun_keyframes))
-    print('sun_colors[\'set\']: ' + str(sun_colors['set']))
-    print('cal_event_color_str: ' + str(cal_event_color_str))
-    print('cur_weather: ' + cur_weather + '(is_init: ' + str(is_init) + ')')
-    print('weather_refresh_t: ' + str(weather_refresh_t))
-    print('DJI_difference: ' + str(DJI_difference))
-    print('stocks_color_str: ' + str(stocks_color_str))
-    print('steelers_won: ' + str(steelers_won))
-    print('rangers_won: ' + str(rangers_won))
-    print('priorities: ' + str(priorities))
-    print('---------------------------')
-
+    """
+    Print key global variables.
+    """
+    print('''
+    ----------DEBUG OUT----------
+    esb_color: {esb_color}
+    sun_data[0] (sunrise): {sun_data[0]}
+    sun_data[1] (sunset): {sun_data[1]}
+    sun_keyframes: {sun_keyframes}
+    sun_colors['set'] = {sun_set_color}
+    cal_event_color_str: {cal_event_color_str}
+    cur_weather: {cur_weather} (is_init: {is_init})
+    weather_refresh_t: {weather_refresh_t}
+    DJI_difference: {DJI_difference}
+    stocks_color_str: {stocks_color_str}
+    steelers_won: {steelers_won}
+    rangers_won: {rangers_won}
+    priorities: {priorities}
+    -----------------------------
+    '''.format(**globals(), sun_set_color=sun_colors['set']))
 
 if __name__ == '__main__':
     tr = threading.Thread(target=pc_listener, daemon=True)
