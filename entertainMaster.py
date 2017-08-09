@@ -104,7 +104,7 @@ class Color:
                      min(self.g * other, 255),
                      min(self.b * other, 255))
 
-    def __div__(self, other: int):
+    def __truediv__(self, other: int):
         if other < 0:
             raise ValueError('Cannot divide a Color by a negative number.')
         return Color(self.r // other, self.g // other, self.b // other)
@@ -399,10 +399,11 @@ def sun_event():
         # this check allows the sun color to change at a different frequency than the global event update frequency
         # and the loop allows the sun event to skip events to find the current sun keyframe
         data = None
+        now = datetime.datetime.now()
         while sun_keyframes:
             data = sun_keyframes[0]
             time_req = data[0]
-            if datetime.datetime.today() >= time_req:
+            if now >= time_req:
                 sun_keyframes.popleft()
                 color = data[1]
             else:
@@ -622,9 +623,9 @@ def fetch_esb_color():
     except requests.exceptions.RequestException as e:
         eprint('unable to connect to www.esbnyc.com. Information: ')
         eprint('\t', e, sep='')
+        return None
 
-    c = res.content
-    data = BeautifulSoup(c, 'html.parser')
+    data = BeautifulSoup(res.content, 'html.parser')
     lighting_description = str(data.find('p', 'lighting-desc').string).lstrip('\n ')
 
     for word in lighting_description.split(' '):
@@ -680,14 +681,16 @@ def fetch_weather_data():
 
 def parse_calendar_event():
     global priorities, cal_event_color_str
+    
     today = str(datetime.date.today())
-    with open('holidays.txt', 'r', encoding='UTF-8') as read_file:
-        for line in read_file:
-            line = line.split('|')
-            if line[0] == today:
-                cal_event_color_str = bytes(line[2], encoding='ASCII')
-                priorities['calendar'] = int(line[3].rstrip('\n'))
-                return
+    
+    with open('holidays.txt', 'r', encoding='UTF-8') as holidays:
+        for holiday in holidays:
+            date, _, color, priority = holiday.split('|')
+            if date == today:
+                cal_event_color_str = color.encode()
+                priorities['calendar'] = int(priority)
+                break
 
 
 def crawl_twitter_accounts():
@@ -702,29 +705,29 @@ def crawl_twitter_accounts():
     auth.set_access_token(access_token, access_secret)
 
     api = tweepy.API(auth, timeout=5)
-    rangers_tweet_text = steelers_tweet_text = rangers_tweet_date = steelers_tweet_date = None
+    
+    steelers_won = did_team_win(api, 'Steelers')
+    rangers_won = did_team_win(api, 'Rangers')
+
+    if steelers_won or rangers_won:
+        priorities['sports'] = 3
+
+
+def did_team_win(api: tweepy.API, team_name: str) -> bool:
+    """
+    Query Twitter for whether or not a team won using an API access.
+    """
     yesterday = datetime.date.today() - datetime.timedelta(days=1)
-    try:
-        steelers_tweet = api.user_timeline('DidSteelersWin', count=1)[0]
-        steelers_tweet_date = steelers_tweet.created_at.date()
-        steelers_tweet_text = steelers_tweet.text[:3].rstrip(',')
-    except tweepy.error.TweepError as e:
-        eprint('Failed to connect to Steelers\' Twitter. error: \n\t', e, sep='')
 
     try:
-        rangers_tweet = api.user_timeline('DidRangersWin', count=1)[0]
-        rangers_tweet_date = rangers_tweet.created_at.date()
-        rangers_tweet_text = rangers_tweet.text[:3].rstrip(',')
+        tweet = api.user_timeline('Did%sWin' % team_name.capitalize(), count=1)[0]
+        date = tweet.created_at.date()
+        text = tweet.text[:3].rstrip(',')
     except tweepy.error.TweepError as e:
-        eprint('Failed to connect to Rangers\' Twitter. error: \n\t', e, sep='')
-
-    if rangers_tweet_text.lower() == 'yes' and rangers_tweet_date == yesterday:  # Make sure it is from yesterday
-        rangers_won = True
-        priorities['sports'] = 3
-
-    if steelers_tweet_text.lower() == 'yes' and steelers_tweet_date == yesterday:
-        steelers_won = True
-        priorities['sports'] = 3
+        eprint("Failed to connect to %s's Twitter. error:\n\t%s" % (team_name, e))
+        return False
+    else:
+        return text.lower() == 'yes' and date == yesterday
 
 
 def fetch_stock_data():
@@ -735,12 +738,11 @@ def fetch_stock_data():
     except requests.exceptions.RequestException as e:
         eprint('unable to connect to Google Finance. Information: ')
         eprint('\t', e, sep='')
+        return
 
-    c = res.content
-    data = BeautifulSoup(c, 'html.parser')
-    stock_diff = str(data.find('span', id='ref_983582_c').string)
-    DJI_difference = float(stock_diff)
-
+    data = BeautifulSoup(res.content, 'html.parser')
+    DJI_difference = float(data.find('span', id='ref_983582_c').string)
+    
     if 200.0 <= DJI_difference < 300:
         stocks_color_str = b'03f1002,i9902,f0507'  # single pulse
         priorities['stocks'] = 2
