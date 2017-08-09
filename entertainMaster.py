@@ -260,17 +260,18 @@ def update_event_data():
 
 # Could possibly be multithreaded, but with a 15 minute main loop refresh time, it isn't really competing for resources.
 def pc_listener():
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind((socket.gethostbyname('192.168.1.8'), 8493))
-    server_socket.listen(5)
-    host = socket.gethostbyname(socket.gethostname())
-    port = 8493
-    print("This program's server:port | %s:%d" % (host, port))
-
-    while True:
-        (client_socket, address) = server_socket.accept()
-        ct = threading.Thread(target=accept_info, args=[client_socket])  # Not a daemon since it writes to a file
-        ct.run()
+    # server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    # server_socket.bind((socket.gethostbyname('192.168.1.8'), 8493))
+    # server_socket.listen(5)
+    # host = socket.gethostbyname(socket.gethostname())
+    # port = 8493
+    # print("This program's server:port | %s:%d" % (host, port))
+    #
+    # while True:
+    #     (client_socket, address) = server_socket.accept()
+    #     ct = threading.Thread(target=accept_info, args=[client_socket])  # Not a daemon since it writes to a file
+    #     ct.run()
+    pass
 
 
 def accept_info(msg, server_socket):

@@ -2560,7 +2560,6 @@ Sangria,146,0,10
 Sapgreen,80,125,42
 Sapphire,15,82,186
 Sapphireblue,0,103,165
-Sashorange,911,13,13
 SasquatchSocks,255,70,129
 Satinsheengold,203,161,53
 Scarlet,255,36,0
