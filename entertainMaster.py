@@ -35,6 +35,7 @@ ex:
 """
 from __future__ import print_function
 
+import ssl
 from collections import deque
 import datetime
 import math
@@ -47,6 +48,7 @@ import sys
 import threading
 import time
 
+import errno
 from bs4 import BeautifulSoup
 import requests
 import serial
@@ -229,6 +231,7 @@ def event_master():
     update_event_data()
     update_priorities()
     next_event = max(priorities, key=priorities.get)
+    print('event_master chose ' + next_event)
     globals()[next_event + '_event']()
 
 
@@ -260,48 +263,78 @@ def update_event_data():
 
 # Could possibly be multithreaded, but with a 15 minute main loop refresh time, it isn't really competing for resources.
 def pc_listener():
-    # server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    # server_socket.bind((socket.gethostbyname('192.168.1.8'), 8493))
-    # server_socket.listen(5)
-    # host = socket.gethostbyname(socket.gethostname())
-    # port = 8493
-    # print("This program's server:port | %s:%d" % (host, port))
-    #
-    # while True:
-    #     (client_socket, address) = server_socket.accept()
-    #     ct = threading.Thread(target=accept_info, args=[client_socket])  # Not a daemon since it writes to a file
-    #     ct.run()
-    pass
+    use_ssl = False
+    while True:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(30)  # 30 seconds. Must be done this way to avoid default OS timeout
+        if use_ssl:
+            context = ssl.create_default_context()
+            context.check_hostname = True
+            messenger_socket = context.wrap_socket(sock, server_hostname='www.michaelmanis.com')
+        else:
+            messenger_socket = sock
+        print('Starting server connection')
+        with messenger_socket:
+            connected = False
+            while not connected:
+                try:
+                    messenger_socket.connect(('www.michaelmanis.com', 8493))
+                except OSError:
+                    pass
+                else:
+                    connected = True
+                    print('Connected to remote server')
+
+            try:
+                msg = messenger_socket.recv(1024)
+            except socket.timeout:
+                print("No message was received before timeout")
+            except OSError as e:
+                    if e.errno is 10054:
+                        print('The connection was closed by the server')
+            else:
+                accept_info(msg, messenger_socket)
+                try:
+                    messenger_socket.shutdown(socket.SHUT_RDWR)
+                    print('Closed the socket')
+                except socket.error as e:
+                    if e.errno != errno.ENOTCONN:
+                        raise e
+                    else:
+                        print('The connection was closed by the server')
+            #     ct = threading.Thread(target=accept_info, args=[client_socket])  # Not a daemon since it writes to a file
+            #     ct.run()
 
 
-def accept_info(msg, server_socket):
-    global interrupt_lock, interrupt_active, cur_event
-    print('Received client message: ')
+def accept_info(msg, messenger_socket):
+    global cur_event
+    print('Received server message: ')
     print('\t', msg, sep='')
+
     if msg[:1] == b'1':  # status update request
         print('cur_event: %s' % cur_event)
-        server_socket.sendall(cur_event.encode('UTF-8'))
+        messenger_socket.sendall(cur_event.encode('UTF-8'))
 
     elif msg[:1] == b'c':  # custom color code
         if len(msg) == 13:
             print('received custom color: %s' % msg)
             fire_interrupt(msg)
-            server_socket.sendall(cur_event.encode('UTF-8'))
+            messenger_socket.sendall(cur_event.encode('UTF-8'))
         else:
             print('Invalid custom color: %s' % msg)
 
     elif msg[:1] == b'v':  # custom string
         if len(msg) >= 8:  # vnnXttCC is the minimum length. max length is 595 (99 chunks minus 1 comma plus 'nn')
             print('received custom string: %s' % msg)
-            fire_interrupt(b'v' + msg)
+            fire_interrupt(msg)
+            messenger_socket.sendall(cur_event.encode('UTF-8'))
         else:
             print('Invalid custom string: %s' % msg)
 
-    else:  # must be an interrupt
+    else:  # must be a miscellaneous interrupt
         response = fire_interrupt(msg)
-        server_socket.sendall(response.encode('UTF-8'))
+        messenger_socket.sendall(response.encode('UTF-8'))
         print('sent event: %s' % response)
-    server_socket.close()
 
 
 def fire_interrupt(signal, resume=False):
@@ -313,8 +346,8 @@ def fire_interrupt(signal, resume=False):
     - o = off
     - s = music mode (unimplemented)
     - r = relax mode (unimplemented)
-    - c = custom color (unimplemented)
-    - v = custom string (unimplemented)
+    - c = custom color
+    - v = custom string
     """
     global interrupt_lock, interrupt_active, cur_event
 
@@ -325,13 +358,9 @@ def fire_interrupt(signal, resume=False):
             open('interrupt.temp', 'w').close()
 
             cur_event = None
-            t = threading.Thread(target=event_master, daemon=True)
-            t.start()
+            event_master()
 
-            while cur_event is None:  # wait for event_master thread to create a new event. Potentially unsafe. TODO test this
-                time.sleep(0.5)
-
-            return cur_event
+        return cur_event
 
     else:
         with interrupt_lock:
@@ -395,50 +424,48 @@ def sun_event():
     global sun_keyframes, last_sun_color, cur_event, sun_key_count
 
     print('\tFiring sun_event')
-    if sun_keyframes:
-        color = None
-        # this check allows the sun color to change at a different frequency than the global event update frequency
-        # and the loop allows the sun event to skip events to find the current sun keyframe
-        data = None
-        now = datetime.datetime.now()
-        while sun_keyframes:
-            data = sun_keyframes[0]
-            time_req = data[0]
-            if now >= time_req:
-                sun_keyframes.popleft()
-                color = data[1]
-            else:
-                break
-
-        if color is not None:
-            keyframe_index = data[2]
-            last_sun_color = (color, keyframe_index)
-
-            if keyframe_index <= sun_key_count/4:  # if keyframe is within the first quarter of keyframes
-                cur_event = 'sunrise'
-            elif keyframe_index < sun_key_count * 0.75:  # if keyframe is above first quarter but below last quarter
-                cur_event = 'midday'
-            else:  # if keyframe is within last quarter
-                if keyframe_index == sun_key_count - 1:
-                    cur_event = 'sundown'
-                else:
-                    cur_event = 'sunset'
-            send_color_str(bytes(color))
+    color = None
+    # this check allows the sun color to change at a different frequency than the global event update frequency
+    # and the loop allows the sun event to skip events to find the current sun keyframe
+    data = None
+    now = datetime.datetime.now()
+    while sun_keyframes:
+        data = sun_keyframes[0]
+        time_req = data[0]
+        if now >= time_req:
+            sun_keyframes.popleft()
+            color = data[1]
         else:
-            col = last_sun_color[0]
-            ind = last_sun_color[1]
+            break
 
-            if ind <= sun_key_count/4:
-                cur_event = 'sunrise'
-            elif ind <= sun_key_count * 0.75:
-                cur_event = 'midday'
+    if color is not None:
+        keyframe_index = data[2]
+        last_sun_color = (color, keyframe_index)
+
+        if keyframe_index <= sun_key_count/4:  # if keyframe is within the first quarter of keyframes
+            cur_event = 'sunrise'
+        elif keyframe_index < sun_key_count * 0.75:  # if keyframe is above first quarter but below last quarter
+            cur_event = 'midday'
+        else:  # if keyframe is within last quarter
+            if keyframe_index == sun_key_count - 1:
+                cur_event = 'sundown'
             else:
-                if ind == sun_key_count - 1:
-                    cur_event = 'sundown'
-                else:
-                    cur_event = 'sunset'
-            send_color_str(bytes(col))
-            # else the queue is empty, do nothing
+                cur_event = 'sunset'
+        send_color_str(bytes(color))
+    else:
+        col = last_sun_color[0]
+        ind = last_sun_color[1]
+
+        if ind <= sun_key_count/4:
+            cur_event = 'sunrise'
+        elif ind <= sun_key_count * 0.75:
+            cur_event = 'midday'
+        else:
+            if ind == sun_key_count - 1:
+                cur_event = 'sundown'
+            else:
+                cur_event = 'sunset'
+        send_color_str(bytes(col))
 
 
 def weather_event():
