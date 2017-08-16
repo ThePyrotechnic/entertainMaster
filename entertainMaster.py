@@ -418,9 +418,7 @@ def resume_interrupt():
     if path.isfile('interrupt.temp'):
         with open('interrupt.temp', 'rb') as interrupt_state:
             signal = interrupt_state.read()
-            if signal == b'':
-                return
-            else:
+            if signal:
                 fire_interrupt(signal, resume=True)
 
 
