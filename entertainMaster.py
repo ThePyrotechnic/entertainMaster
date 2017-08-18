@@ -35,7 +35,6 @@ ex:
 """
 from __future__ import print_function
 
-import ssl
 from collections import deque
 import datetime
 import math
@@ -43,6 +42,7 @@ from os import path
 import random
 import re
 import socket
+import ssl
 from string import punctuation
 import sys
 import threading
@@ -231,7 +231,7 @@ def event_master():
     update_event_data()
     update_priorities()
     next_event = max(priorities, key=priorities.get)
-    print('event_master chose ' + next_event)
+    print('event_master chose', next_event)
     globals()[next_event + '_event']()
 
 
@@ -290,8 +290,8 @@ def pc_listener():
             except socket.timeout:
                 print("No message was received before timeout")
             except OSError as e:
-                    if e.errno is 10054:
-                        print('The connection was closed by the server')
+                if e.errno == 10054:
+                    print('The connection was closed by the server')
             else:
                 accept_info(msg, messenger_socket)
                 try:
@@ -311,30 +311,34 @@ def accept_info(msg, messenger_socket):
     print('Received server message: ')
     print('\t', msg, sep='')
 
-    if msg[:1] == b'1':  # status update request
-        print('cur_event: %s' % cur_event)
+    status_update = b'1'
+    custom_color = b'c'
+    custom_string = b'v'
+    
+    if msg.startswith(status_update):
+        print('cur_event:', cur_event)
         messenger_socket.sendall(cur_event.encode('UTF-8'))
 
-    elif msg[:1] == b'c':  # custom color code
+    elif msg.startswith(custom_color):
         if len(msg) == 13:
-            print('received custom color: %s' % msg)
+            print('received custom color:', msg)
             fire_interrupt(msg)
             messenger_socket.sendall(cur_event.encode('UTF-8'))
         else:
-            print('Invalid custom color: %s' % msg)
+            print('Invalid custom color:', msg)
 
-    elif msg[:1] == b'v':  # custom string
+    elif msg.startswith(custom_string):
         if len(msg) >= 8:  # vnnXttCC is the minimum length. max length is 595 (99 chunks minus 1 comma plus 'nn')
-            print('received custom string: %s' % msg)
+            print('received custom string:', msg)
             fire_interrupt(msg)
             messenger_socket.sendall(cur_event.encode('UTF-8'))
         else:
-            print('Invalid custom string: %s' % msg)
+            print('Invalid custom string:', msg)
 
     else:  # must be a miscellaneous interrupt
         response = fire_interrupt(msg)
         messenger_socket.sendall(response.encode('UTF-8'))
-        print('sent event: %s' % response)
+        print('sent event:', response)
 
 
 def fire_interrupt(signal, resume=False):
@@ -390,11 +394,11 @@ def fire_interrupt(signal, resume=False):
             # send_color_str(signal)  # implement on arduino
             cur_event = 'music'
 
-        elif signal[0] == 99:  # (c) custom color
+        elif signal.startswith(b'c'):  # (c) custom color
             send_color_str(signal[1:])
             cur_event = 'color'
 
-        elif signal[0] == 118:  # (v) custom string
+        elif signal.startswith(b'v'):  # (v) custom string
             send_color_str(signal[1:])
             cur_event = 'string'
 
@@ -414,9 +418,7 @@ def resume_interrupt():
     if path.isfile('interrupt.temp'):
         with open('interrupt.temp', 'rb') as interrupt_state:
             signal = interrupt_state.read()
-            if signal == b'':
-                return
-            else:
+            if signal:
                 fire_interrupt(signal, resume=True)
 
 
@@ -533,14 +535,15 @@ def sports_event():
     team_prio = {'rangers': rangers_won, 'steelers': steelers_won}
 
     team = None
-    for t in team_prio:
-        if team_prio[t]:
+    for t, won in team_prio.items():
+        if won:
             team = t
+            break
 
-    if team == 'rangers':
+    if team.lower() == 'rangers':
         send_color_str(b'04f1000,i5000,f1001,i5001')
         cur_event = 'rangers'
-    elif team == 'steelers':
+    elif team.lower() == 'steelers':
         send_color_str(b'04f1015,i5015,f0207,i5007')
         cur_event = 'steelers'
     else:
