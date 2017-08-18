@@ -535,14 +535,15 @@ def sports_event():
     team_prio = {'rangers': rangers_won, 'steelers': steelers_won}
 
     team = None
-    for t in team_prio:
-        if team_prio[t]:
+    for t, won in team_prio.items():
+        if won:
             team = t
+            break
 
-    if team == 'rangers':
+    if team.lower() == 'rangers':
         send_color_str(b'04f1000,i5000,f1001,i5001')
         cur_event = 'rangers'
-    elif team == 'steelers':
+    elif team.lower() == 'steelers':
         send_color_str(b'04f1015,i5015,f0207,i5007')
         cur_event = 'steelers'
     else:
