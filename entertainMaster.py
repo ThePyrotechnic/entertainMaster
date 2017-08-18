@@ -231,7 +231,7 @@ def event_master():
     update_event_data()
     update_priorities()
     next_event = max(priorities, key=priorities.get)
-    print('event_master chose ' + next_event)
+    print('event_master chose', next_event)
     globals()[next_event + '_event']()
 
 
