@@ -1,0 +1,1 @@
+python C:\Users\Michael\PycharmProjects\entertainMaster\entertainMaster.py

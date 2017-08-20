@@ -92,8 +92,8 @@ if (msg) {
       byte next = 2; // location of next chunk in the 'in' string
       byte single = 0;
       
-      while (Serial.available() == 0 && !single) {
-        for (int a = 0; a < numCols; a++) {
+      while (!single) {
+        for (int a = 0; a < numCols && Serial.available() == 0; a++) {
           memcpy(lightData, &in[next], 5);
           lightData[5] = '\0';
           next += 6;
@@ -200,7 +200,6 @@ void set(byte r, byte g, byte b, int dur) {
   red = r;
   grn = g;
   blu = b;
-
   analogWrite(R, r);
   analogWrite(G, g);
   analogWrite(B, b);
