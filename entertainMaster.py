@@ -94,6 +94,7 @@ class Color:
                      min(self.g + other.g, 0xFF),
                      min(self.b + other.b, 0xFF))
 
+    # TODO Must figure out a way to allow negatives so that the sunset keyframes can be generated
     def __sub__(self, other):
         return Color(max(self.r - other.r, 0),
                      max(self.g - other.g, 0),
@@ -145,7 +146,7 @@ rangers_won = False
 steelers_won = False
 
 DJI_difference = None
-not_fetched_stocks = True
+fetched_stocks = False
 stocks_color_str = None
 
 # 0 - 6. 5 is highest normal prio, 6 is special prio, 0 is default. (-1 is ignored)
@@ -167,7 +168,7 @@ def eprint(*args, **kwargs):
 
 
 def init():
-    global esb_color, arduino, sun_data, cur_weather, sun_keyframes, not_fetched_stocks
+    global esb_color, arduino, sun_data, cur_weather, sun_keyframes, fetched_stocks
     # hog the Arduino
     try:
         arduino = serial.Serial('COM4', 9600, timeout=0.2)
@@ -186,18 +187,22 @@ def init():
     if dat is not None:
         sun_data = (dat[0], dat[1])
         cur_weather = dat[2]
+    print('Generating sun keyframes...')
     sun_keyframes = generate_sun_keys()
 
     # read holidays.txt for an event
     parse_calendar_event()
+    print('Parsing calendar events...')
 
     # read tweets for sports information
     crawl_twitter_accounts()
+    print('Crawling Twitter...')
 
     # get stock data if necessary
     if datetime.datetime.today().hour >= 16:
+        print('Fetching stock data...')
         fetch_stock_data()
-        not_fetched_stocks = False  # only fetch once
+        fetched_stocks = True  # only fetch once
 
     # resume interrupts if necessary
     resume_interrupt()
@@ -236,14 +241,16 @@ def event_master():
 
 
 def update_priorities():
-    global priorities
+    global priorities, fetched_stocks
     # TODO remember to add any changing event priorities here
 
     priorities['weather'] = get_weather_priority()
+    if fetched_stocks:
+        priorities['stocks'] = get_stocks_priority()
 
 
 def update_event_data():
-    global weather_refresh_t, cur_weather, not_fetched_stocks, WEATHER_UPDATE_INTERVAL
+    global weather_refresh_t, cur_weather, fetched_stocks, WEATHER_UPDATE_INTERVAL
     # TODO remember to add any new events here
     weather_refresh = datetime.timedelta(seconds=WEATHER_UPDATE_INTERVAL * 60)  # change to seconds when debugging
 
@@ -256,9 +263,9 @@ def update_event_data():
         weather_refresh_t = datetime.datetime.today()
 
     nasdaq_close = four_pm = 16
-    if not_fetched_stocks and today.hour >= nasdaq_close:
+    if not fetched_stocks and today.hour >= nasdaq_close:
         fetch_stock_data()
-        not_fetched_stocks = False  # only fetch once
+        fetched_stocks = True  # only fetch once
 
 
 # Could possibly be multithreaded, but with a 15 minute main loop refresh time, it isn't really competing for resources.
@@ -396,7 +403,7 @@ def fire_interrupt(signal, resume=False):
 
         elif signal.startswith(b'c'):  # (c) custom color
             send_color_str(signal[1:])
-            cur_event = 'color'
+            cur_event = signal
 
         elif signal.startswith(b'v'):  # (v) custom string
             send_color_str(signal[1:])
@@ -472,6 +479,7 @@ def sun_event():
 
 def weather_event():
     global cur_weather, cur_event
+    handled = False  # Helps find new weather events
 
     print('\tFiring weather_event')
     if 'thunder' in cur_weather.lower():
@@ -485,6 +493,7 @@ def weather_event():
             str_to_send += b',' + random.choice(chunks)
         send_color_str(str_to_send)
         cur_event = 'thunder'
+        handled = True
 
     if 'rain' in cur_weather.lower():
         # chunks:
@@ -500,6 +509,7 @@ def weather_event():
             str_to_send += b',' + random.choice(chunks)
         send_color_str(str_to_send)
         cur_event = 'rain'
+        handled = True
 
     if 'snow' in cur_weather.lower():
         # chunks:
@@ -512,8 +522,9 @@ def weather_event():
             str_to_send += b',' + random.choice(chunks)
         send_color_str(str_to_send)
         cur_event = 'snow'
+        handled = True
 
-    else:
+    if not handled:
         eprint('Unknown weather event: ' + cur_weather)
 
 
@@ -633,6 +644,19 @@ def get_weather_priority():
         return 5
     else:
         return -1
+
+
+def get_stocks_priority():
+    global priorities
+
+    today = datetime.datetime.today()
+    nasdaq_close = four_pm = 16
+
+    # only show stock event for a few hours
+    if today.hour >= nasdaq_close + 3:
+        return -1
+    else:
+        return priorities['stocks']
 
 
 def fetch_esb_color():
