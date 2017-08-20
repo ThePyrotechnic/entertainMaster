@@ -403,7 +403,7 @@ def fire_interrupt(signal, resume=False):
 
         elif signal.startswith(b'c'):  # (c) custom color
             send_color_str(signal[1:])
-            cur_event = signal
+            cur_event = signal.decode()
 
         elif signal.startswith(b'v'):  # (v) custom string
             send_color_str(signal[1:])
