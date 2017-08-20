@@ -94,7 +94,6 @@ class Color:
                      min(self.g + other.g, 0xFF),
                      min(self.b + other.b, 0xFF))
 
-    # TODO Must figure out a way to allow negatives so that the sunset keyframes can be generated
     def __sub__(self, other):
         return Color(max(self.r - other.r, 0),
                      max(self.g - other.g, 0),
@@ -597,11 +596,11 @@ def generate_sun_keys():
     if sun_colors['set'] is None:
         sun_colors['set'] = random_color(dim=True)
 
-    c_diff = (sun_colors['set'] - sun_colors['mid']) / (set_key_count - 1)
+    c_diff = (sun_colors['mid'] - sun_colors['set']) / (set_key_count - 1)
 
     for a in range(set_key_count - 1):
         hour_req = sun_data[0] + datetime.timedelta(hours=rise_key_count + a)
-        keyframes.append((hour_req, sun_colors['mid'] + c_diff * a, a + rise_key_count))
+        keyframes.append((hour_req, sun_colors['mid'] - c_diff * a, a + rise_key_count))
     hour_req = sun_data[0] + datetime.timedelta(hours=rise_key_count + set_key_count - 1)
     keyframes.append((hour_req, sun_colors['set'], sun_key_count - 1))
 
