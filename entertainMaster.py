@@ -153,7 +153,8 @@ priorities = {'sun': 0,
               'weather': -1,
               'calendar': -1,
               'sports': -1,
-              'stocks': -1}
+              'stocks': -1,
+              'sleep': -1}
 
 EVENT_THREAD_INTERVAL = 5  # time, in minutes, for the master timer to wait before spawning a new event cycle
 WEATHER_UPDATE_INTERVAL = 15  # minimum time, in minutes, between weather update requests
@@ -219,7 +220,6 @@ def init():
 def master_timer():
     global EVENT_THREAD_INTERVAL, interrupt_lock, interrupt_active
     while True:
-        try_sleep_event()
         with interrupt_lock:
             if not interrupt_active:
                 # Place a breakpoint here to manually allow threads through while debugging
@@ -244,6 +244,7 @@ def update_priorities():
     global priorities, fetched_stocks
     # TODO remember to add any changing event priorities here
 
+    priorities['sleep'] = get_sleep_priority()
     priorities['weather'] = get_weather_priority()
     if fetched_stocks:
         priorities['stocks'] = get_stocks_priority()
@@ -390,17 +391,6 @@ def fire_interrupt(signal, resume=False):
             else:
                 send_color_str(b'01s0416')
             cur_event = 'sleep'
-
-        elif signal == b'zz':  # Special event for automatic sleep mode
-            if resume:
-                send_color_str(b':002,000,000')
-                while datetime.datetime.now().hour < 6:
-                    time.sleep(5 * 60)
-                fire_interrupt(b'x')
-            else:
-                send_color_str(b'01s0416')
-                cur_event = 'sleep'
-
         # TODO Add unimplemented events
         elif signal == b'r':  # relax mode
             print('Unimplemented')
@@ -591,6 +581,14 @@ def stocks_event():
     cur_event = 'stocks'
 
 
+def sleep_event():
+    global cur_event
+    print('\t Firing sleep_event')
+
+    send_color_str(b'01s0416')
+    cur_event = 'sleep'
+
+
 def generate_sun_keys():
     global sun_data, sun_colors, sun_key_count
 
@@ -676,6 +674,18 @@ def get_stocks_priority():
         return -1
     else:
         return priorities['stocks']
+
+
+def get_sleep_priority():
+    current_hour = datetime.datetime.today().hour
+
+    bed_time = 0
+    wake_time = 6
+
+    if bed_time <= current_hour <= wake_time:
+        return 5
+    else:
+        return -1
 
 
 def fetch_esb_color():
