@@ -219,6 +219,7 @@ def init():
 def master_timer():
     global EVENT_THREAD_INTERVAL, interrupt_lock, interrupt_active
     while True:
+        try_sleep_event()
         with interrupt_lock:
             if not interrupt_active:
                 # Place a breakpoint here to manually allow threads through while debugging
@@ -258,7 +259,7 @@ def update_event_data():
     time_since_last_weather = today - weather_refresh_t
     if time_since_last_weather > weather_refresh:
         print('Refreshing weather...')
-        cur_weather = fetch_weather_data()  # TODO Uncomment this when not testing weather
+        cur_weather = fetch_weather_data()
         weather_refresh_t = datetime.datetime.today()
 
     nasdaq_close = four_pm = 16
@@ -390,6 +391,16 @@ def fire_interrupt(signal, resume=False):
                 send_color_str(b'01s0416')
             cur_event = 'sleep'
 
+        elif signal == b'zz':  # Special event for automatic sleep mode
+            if resume:
+                send_color_str(b':002,000,000')
+                while datetime.datetime.now().hour < 6:
+                    time.sleep(5 * 60)
+                fire_interrupt(b'x')
+            else:
+                send_color_str(b'01s0416')
+                cur_event = 'sleep'
+
         # TODO Add unimplemented events
         elif signal == b'r':  # relax mode
             print('Unimplemented')
@@ -420,12 +431,21 @@ def fire_interrupt(signal, resume=False):
 
 
 def resume_interrupt():
-    global interrupt_lock, interrupt_active, cur_event
     if path.isfile('interrupt.temp'):
         with open('interrupt.temp', 'rb') as interrupt_state:
             signal = interrupt_state.read()
             if signal:
                 fire_interrupt(signal, resume=True)
+
+
+def try_sleep_event():
+    global cur_event
+
+    sleep_time = 0
+    wake_time = 6
+
+    if sleep_time <= datetime.datetime.now().hour <= wake_time:
+        fire_interrupt(b'zz')
 
 
 def sun_event():
