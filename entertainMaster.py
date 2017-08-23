@@ -112,50 +112,31 @@ class Color:
         return Color(self.r // other, self.g // other, self.b // other)
 
 
-WHITE = Color(0xFF, 0xFF, 0xFF)
-
-
-# globals TODO describe variable structure
 arduino = None
-bus_lock = threading.Lock()
-interrupt_lock = threading.Lock()
+bus_lock = None
+interrupt_lock = None
 interrupt_active = False
 colors = {}
 cur_event = None
-
 esb_color = None
-
-# Default sunrise/set times, just in case
-sun_data = (datetime.datetime.combine(datetime.date.today(), datetime.time(hour=6)),
-            datetime.datetime.combine(datetime.date.today(), datetime.time(hour=20, minute=30)))
+sun_data = None
 sun_keyframes = None
 sun_key_count = 0
 is_init = True
-sun_colors = {'rise': Color(255, 10, 0),
-              'mid': Color(255, 255, 255),
-              'set': None}
-last_sun_color = (Color(255, 10, 0), 0)
-
+sun_colors = None
+last_sun_color = None
 cur_weather = None
-weather_refresh_t = datetime.datetime.today()
-
+weather_refresh_t = None
 cal_event_color_str = None
-
 rangers_won = False
 steelers_won = False
-
 DJI_difference = None
 fetched_stocks = False
 stocks_color_str = None
+priorities = None
 
-# 0 - 6. 5 is highest normal prio, 6 is special prio, 0 is default. (-1 is ignored)
-priorities = {'sun': 0,
-              'weather': -1,
-              'calendar': -1,
-              'sports': -1,
-              'stocks': -1,
-              'sleep': -1}
-
+# constants
+WHITE = Color(0xFF, 0xFF, 0xFF)
 EVENT_THREAD_INTERVAL = 5  # time, in minutes, for the master timer to wait before spawning a new event cycle
 WEATHER_UPDATE_INTERVAL = 15  # minimum time, in minutes, between weather update requests
 
@@ -168,7 +149,53 @@ def eprint(*args, **kwargs):
 
 
 def init():
-    global esb_color, arduino, sun_data, cur_weather, sun_keyframes, fetched_stocks
+    global esb_color, arduino, sun_data, cur_weather, sun_keyframes, fetched_stocks, bus_lock, interrupt_lock, \
+        interrupt_active, colors, cur_event, esb_color, sun_data, sun_keyframes, sun_key_count, is_init, sun_colors, \
+        last_sun_color, cur_weather, weather_refresh_t, cal_event_color_str, rangers_won, steelers_won, DJI_difference, \
+        fetched_stocks, stocks_color_str, priorities
+
+    # intiialize globals
+    # TODO describe variable structure
+    arduino = None
+    bus_lock = threading.Lock()
+    interrupt_lock = threading.Lock()
+    interrupt_active = False
+    colors = {}
+    cur_event = None
+
+    esb_color = None
+
+    # Default sunrise/set times, just in case
+    sun_data = (datetime.datetime.combine(datetime.date.today(), datetime.time(hour=6)),
+                datetime.datetime.combine(datetime.date.today(), datetime.time(hour=20, minute=30)))
+    sun_keyframes = None
+    sun_key_count = 0
+    is_init = True
+    sun_colors = {'rise': Color(255, 10, 0),
+                  'mid': Color(255, 255, 255),
+                  'set': None}
+    last_sun_color = (Color(255, 10, 0), 0)
+
+    cur_weather = None
+    weather_refresh_t = datetime.datetime.today()
+
+    cal_event_color_str = None
+
+    rangers_won = False
+    steelers_won = False
+
+    DJI_difference = None
+    fetched_stocks = False
+    stocks_color_str = None
+
+    # 0 - 6. 5 is highest normal prio, 6 is special prio, 0 is default. (-1 is ignored)
+    priorities = {'sun': 0,
+                  'weather': -1,
+                  'calendar': -1,
+                  'sports': -1,
+                  'stocks': -1,
+                  'sleep': -1}
+
     # hog the Arduino
     try:
         arduino = serial.Serial('COM4', 9600, timeout=0.2)
@@ -218,15 +245,17 @@ def init():
 
 
 def master_timer():
-    global EVENT_THREAD_INTERVAL, interrupt_lock, interrupt_active
+    global EVENT_THREAD_INTERVAL, interrupt_lock, interrupt_active, arduino
     while True:
         with interrupt_lock:
             if not interrupt_active:
                 # Place a breakpoint here to manually allow threads through while debugging
                 t = threading.Thread(target=event_master, daemon=True)
                 t.start()
-
-        time.sleep(EVENT_THREAD_INTERVAL * 60)  # change to seconds when debugging
+        if datetime.datetime.now().hour == 4:
+            return
+        else:
+            time.sleep(EVENT_THREAD_INTERVAL * 60)  # change to seconds when debugging
 
 
 def event_master():
@@ -874,4 +903,5 @@ def debug_print():
 if __name__ == '__main__':
     tr = threading.Thread(target=pc_listener, daemon=True)
     tr.start()
-    init()
+    while True:
+        init()
