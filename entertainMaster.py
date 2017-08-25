@@ -712,7 +712,7 @@ def get_sleep_priority():
     wake_time = 6
 
     if bed_time <= current_hour <= wake_time:
-        return 5
+        return 6
     else:
         return -1
 

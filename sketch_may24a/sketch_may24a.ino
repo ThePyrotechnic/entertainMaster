@@ -5,7 +5,7 @@
 
 // :RRR,GGG,BBB                               <-- set new color
 // nnXttCC,XttCC,XttCC,XttCC,XttCC,XttCC... <-- program new loop
-#define INPUT_LEN 595 
+#define INPUT_LEN 595
 //nn is number of colors in sequence (max 99)
 //X is 'f' (fade) or 'i' (instant) or 's' (fade, no loop) or 'c' (instant, no loop)
 //tt is time (for 'i': time to wait after switching, in hundreds of millis. For 'f': time between fade steps, in millis)
@@ -51,7 +51,7 @@ const char* DRE = ":002,000,000";
 const char* BLD = ":060,000,255";
 const char* DPN = ":012,000,001";
 // must also add new macros to array
-const char* const states[] = {RED, BLU, GRN, WHT, PRP, PNK, ONG, OFF, LBL, DBL, DWH, MOV, DPR, DGR, BRN, YLW, DRE, BLD, DPN}; 
+const char* const states[] = {RED, BLU, GRN, WHT, PRP, PNK, ONG, OFF, LBL, DBL, DWH, MOV, DPR, DGR, BRN, YLW, DRE, BLD, DPN};
 
 //global current light values
 byte red = 0;
@@ -75,10 +75,9 @@ void setup() {
 }
 
 void loop() {
-if (msg) {
+  if (msg) {
     msg = 0;
-
-  if (in[0] == ':') { // requesting a direct color
+    if (in[0] == ':') { // requesting a direct color
       stringSet(in, 0);
     }
     else if (in[2] == 'f' || in[2] == 'i' || in[2] == 's' || in[2] == 'c') { // requesting a custom program
@@ -91,8 +90,8 @@ if (msg) {
 
       byte next = 2; // location of next chunk in the 'in' string
       byte single = 0;
-      
-      while (!single) {
+
+      while (!single && Serial.available() == 0) {
         for (int a = 0; a < numCols && Serial.available() == 0; a++) {
           memcpy(lightData, &in[next], 5);
           lightData[5] = '\0';
@@ -122,9 +121,9 @@ void parseSplit(char* split) {
   interval[2] = '\0';
 
   char col[3];
-  memcpy(col, &split[3],2);
+  memcpy(col, &split[3], 2);
   col[2] = '\0';
-  
+
   if (split[0] == 'f' || split[0] == 's') fade(states[atoi(col)], atoi(interval));
   else stringSet(states[atoi(col)], atoi(interval) * 100); //split[0] should be i // Range of interval * 100 is 100 - 9900 millis
 }
@@ -164,13 +163,13 @@ void fade(char* col, int dur) {
     bDiff = -bDiff;
     bAdd = -1;
   }
-/*
-  Serial.print("New: "); Serial.print(newR); Serial.print('|'); Serial.print(newG); Serial.print('|'); Serial.println(newB);
-  Serial.print("Cur: "); Serial.print(red); Serial.print('|'); Serial.print(grn); Serial.print('|'); Serial.println(blu);
-  Serial.print("Diff: "); Serial.print(rDiff); Serial.print('|'); Serial.print(gDiff); Serial.print('|'); Serial.println(bDiff);
-  Serial.print("Neg: "); Serial.print(rNeg); Serial.print('|'); Serial.print(gNeg); Serial.print('|'); Serial.println(bNeg);
-  Serial.print("Add: "); Serial.print(rAdd); Serial.print('|'); Serial.print(gAdd); Serial.print('|'); Serial.println(bAdd);
-*/
+  /*
+    Serial.print("New: "); Serial.print(newR); Serial.print('|'); Serial.print(newG); Serial.print('|'); Serial.println(newB);
+    Serial.print("Cur: "); Serial.print(red); Serial.print('|'); Serial.print(grn); Serial.print('|'); Serial.println(blu);
+    Serial.print("Diff: "); Serial.print(rDiff); Serial.print('|'); Serial.print(gDiff); Serial.print('|'); Serial.println(bDiff);
+    Serial.print("Neg: "); Serial.print(rNeg); Serial.print('|'); Serial.print(gNeg); Serial.print('|'); Serial.println(bNeg);
+    Serial.print("Add: "); Serial.print(rAdd); Serial.print('|'); Serial.print(gAdd); Serial.print('|'); Serial.println(bAdd);
+  */
   while (!(rDone && gDone && bDone)) {
     if (red == newR) rDone = 1;
     if (grn == newG) gDone = 1;
