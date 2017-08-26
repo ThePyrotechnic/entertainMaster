@@ -391,9 +391,6 @@ def fire_interrupt(signal, resume=False):
     - v = custom string
     """
     global interrupt_lock, interrupt_active, cur_event
-
-    with interrupt_lock:
-        interrupt_active = signal != b'x'
     
     if signal == b'x':
         if interrupt_active:
