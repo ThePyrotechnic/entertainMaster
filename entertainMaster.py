@@ -517,47 +517,48 @@ def weather_event():
     handled = False  # Helps find new weather events
 
     print('\tFiring weather_event')
-    if 'thunder' in cur_weather.lower():
-        # chunks:
-        # flash - i0103,f0201
-        # long wait - f0201,i5001
-        # short wait - f0201,i2501
-        chunks = (b'f0201,i2501', b'i0103,f0201')
-        str_to_send = b'32f0201,i5001'  # remember that the string must start with the expected number of colors
-        for _ in range(15):
-            str_to_send += b',' + random.choice(chunks)
-        send_color_str(str_to_send)
-        cur_event = 'thunder'
-        handled = True
+    if cur_weather is not None:
+        if 'thunder' in cur_weather.lower():
+            # chunks:
+            # flash - i0103,f0201
+            # long wait - f0201,i5001
+            # short wait - f0201,i2501
+            chunks = (b'f0201,i2501', b'i0103,f0201')
+            str_to_send = b'32f0201,i5001'  # remember that the string must start with the expected number of colors
+            for _ in range(15):
+                str_to_send += b',' + random.choice(chunks)
+            send_color_str(str_to_send)
+            cur_event = 'thunder'
+            handled = True
 
-    if 'rain' in cur_weather.lower():
-        # chunks:
-        # long light blue - f0508,i5008
-        # long blue - f0501,i5001
-        # long dim blue - f0509,i5009
-        # short light blue - f0508,i2508
-        # short blue - f0501,i2501
-        # short dim blue - f0509,i2509
-        chunks = (b'f0508,i5008', b'f0501,i5001', b'f0508,i2508', b'f0501,i2501', b'f0501,i2501', b'f0509,i2509')
-        str_to_send = b'32f0208,i5008'
-        for _ in range(15):
-            str_to_send += b',' + random.choice(chunks)
-        send_color_str(str_to_send)
-        cur_event = 'rain'
-        handled = True
+        if 'rain' in cur_weather.lower():
+            # chunks:
+            # long light blue - f0508,i5008
+            # long blue - f0501,i5001
+            # long dim blue - f0509,i5009
+            # short light blue - f0508,i2508
+            # short blue - f0501,i2501
+            # short dim blue - f0509,i2509
+            chunks = (b'f0508,i5008', b'f0501,i5001', b'f0508,i2508', b'f0501,i2501', b'f0501,i2501', b'f0509,i2509')
+            str_to_send = b'32f0208,i5008'
+            for _ in range(15):
+                str_to_send += b',' + random.choice(chunks)
+            send_color_str(str_to_send)
+            cur_event = 'rain'
+            handled = True
 
-    if 'snow' in cur_weather.lower():
-        # chunks:
-        # flash - i0110,f0303
-        # long wait - f0203,i5003
-        # short wait - f0203,i2503
-        chunks = (b'f0203,i2503', b'i0110,f0303')
-        str_to_send = b'32f0203,i5003'
-        for _ in range(15):
-            str_to_send += b',' + random.choice(chunks)
-        send_color_str(str_to_send)
-        cur_event = 'snow'
-        handled = True
+        if 'snow' in cur_weather.lower():
+            # chunks:
+            # flash - i0110,f0303
+            # long wait - f0203,i5003
+            # short wait - f0203,i2503
+            chunks = (b'f0203,i2503', b'i0110,f0303')
+            str_to_send = b'32f0203,i5003'
+            for _ in range(15):
+                str_to_send += b',' + random.choice(chunks)
+            send_color_str(str_to_send)
+            cur_event = 'snow'
+            handled = True
 
     if not handled:
         eprint('Unknown weather event: ' + cur_weather)
@@ -737,7 +738,7 @@ def fetch_esb_color():
 def fetch_weather_data():
     global is_init
 
-    data = crawl_data('https://www.wunderground.com/cgi-bin/findweather/getForecast?query=Whittier+Oaks%2C+NJ')
+    data = crawl_data('https://www.wunderground.com/weather/us/nj/hoboken')
     if not data:
         return
 
