@@ -803,7 +803,7 @@ def crawl_twitter_accounts():
     
     team_won.update({team: did_team_win(api, team) for team in team_won})
     
-    if any(team_won.values())
+    if any(team_won.values()):
         priorities['sports'] = 3
 
 
