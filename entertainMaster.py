@@ -578,17 +578,15 @@ def sports_event():
 
     # ordered by preference. This list is read left to right so that if multiple teams win, the preferred team is chosen
     # TODO make this a global so it can be modified in UI if desired
-    team = None
-    for t, won in team_won.items():
+    for team, won in team_won.items():
         if won:
-            team = t.lower()
+            team = team.lower()
+            send_color_str(TEAM_COLORS[team])
+            cur_event = team
             break
     else:
         eprint('Sports event chosen, but no team won a game last night')
         return
-
-    send_color_str(TEAM_COLORS[team])
-    cur_event = team
 
 
 def stocks_event():
