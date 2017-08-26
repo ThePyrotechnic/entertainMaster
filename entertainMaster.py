@@ -401,6 +401,8 @@ def fire_interrupt(signal, resume=False):
         return cur_event
 
     else:
+        with interrupt_lock:
+            interrupt_active = True
         if signal == b'm':
             if resume:
                 send_color_str(b':008,002,000')  # this is different because if it gets resumed then the program should not re-animate the 'fade-in'
