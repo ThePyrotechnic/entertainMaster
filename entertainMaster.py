@@ -128,8 +128,7 @@ last_sun_color = None
 cur_weather = None
 weather_refresh_t = None
 cal_event_color_str = None
-rangers_won = False
-steelers_won = False
+team_won = {'rangers': False, 'steelers': False}
 DJI_difference = None
 fetched_stocks = False
 stocks_color_str = None
@@ -138,6 +137,10 @@ priorities = None
 # constants
 WHITE = Color(0xFF, 0xFF, 0xFF)
 EVENT_THREAD_INTERVAL = 5  # time, in minutes, for the master timer to wait before spawning a new event cycle
+TEAM_COLORS = {
+    'rangers': b'04f1000,i5000,f1001,i5001',
+    'steelers': b'04f1015,i5015,f0207,i5007',
+}
 WEATHER_UPDATE_INTERVAL = 15  # minimum time, in minutes, between weather update requests
 
 
@@ -151,7 +154,7 @@ def eprint(*args, **kwargs):
 def init():
     global esb_color, arduino, sun_data, cur_weather, sun_keyframes, fetched_stocks, bus_lock, interrupt_lock, \
         interrupt_active, colors, cur_event, esb_color, sun_data, sun_keyframes, sun_key_count, is_init, sun_colors, \
-        last_sun_color, cur_weather, weather_refresh_t, cal_event_color_str, rangers_won, steelers_won, DJI_difference, \
+        last_sun_color, cur_weather, weather_refresh_t, cal_event_color_str, DJI_difference, \
         fetched_stocks, stocks_color_str, priorities
 
     # intiialize globals
@@ -180,9 +183,6 @@ def init():
     weather_refresh_t = datetime.datetime.today()
 
     cal_event_color_str = None
-
-    rangers_won = False
-    steelers_won = False
 
     DJI_difference = None
     fetched_stocks = False
@@ -392,21 +392,18 @@ def fire_interrupt(signal, resume=False):
     """
     global interrupt_lock, interrupt_active, cur_event
 
+    with interrupt_lock:
+        interrupt_active = signal != b'x'
+    
     if signal == b'x':
         if interrupt_active:
-            with interrupt_lock:
-                interrupt_active = False
             open('interrupt.temp', 'w').close()
-
             cur_event = None
             event_master()
 
         return cur_event
 
     else:
-        with interrupt_lock:
-            interrupt_active = True
-
         if signal == b'm':
             if resume:
                 send_color_str(b':008,002,000')  # this is different because if it gets resumed then the program should not re-animate the 'fade-in'
@@ -422,11 +419,11 @@ def fire_interrupt(signal, resume=False):
             cur_event = 'sleep'
         # TODO Add unimplemented events
         elif signal == b'r':  # relax mode
-            print('Unimplemented')
+            print(NotImplemented)
             cur_event = 'relax'
 
         elif signal == b's':  # song mode
-            print('Unimplemented')
+            print(NotImplemented)
             # send_color_str(signal)  # implement on arduino
             cur_event = 'music'
 
@@ -577,27 +574,20 @@ def calendar_event():
 
 
 def sports_event():
-    global rangers_won, steelers_won, cur_event
+    global cur_event
     print('\tFiring sports_event')
 
     # ordered by preference. This list is read left to right so that if multiple teams win, the preferred team is chosen
     # TODO make this a global so it can be modified in UI if desired
-    team_prio = {'rangers': rangers_won, 'steelers': steelers_won}
-
-    team = None
-    for t, won in team_prio.items():
+    for team, won in team_won.items():
         if won:
-            team = t
+            team = team.lower()
+            send_color_str(TEAM_COLORS[team])
+            cur_event = team
             break
-
-    if team.lower() == 'rangers':
-        send_color_str(b'04f1000,i5000,f1001,i5001')
-        cur_event = 'rangers'
-    elif team.lower() == 'steelers':
-        send_color_str(b'04f1015,i5015,f0207,i5007')
-        cur_event = 'steelers'
     else:
         eprint('Sports event chosen, but no team won a game last night')
+        return
 
 
 def stocks_event():
@@ -613,7 +603,7 @@ def stocks_event():
 
 def sleep_event():
     global cur_event
-    print('\t Firing sleep_event')
+    print('\tFiring sleep_event')
 
     send_color_str(b'01s0416')
     cur_event = 'sleep'
@@ -732,14 +722,10 @@ def fetch_esb_color():
             colors[color_name.lower()] = Color(int(r), int(g), int(b))
 
     # get the color
-    try:
-        res = requests.get('http://www.esbnyc.com/explore/tower-lights/calendar')
-    except requests.exceptions.RequestException as e:
-        eprint('unable to connect to www.esbnyc.com. Information: ')
-        eprint('\t', e, sep='')
+    data = crawl_data('http://www.esbnyc.com/explore/tower-lights/calendar')
+    if not data:
         return None
 
-    data = BeautifulSoup(res.content, 'html.parser')
     lighting_description = str(data.find('p', 'lighting-desc').string).lstrip('\n ')
 
     for word in lighting_description.split(' '):
@@ -752,15 +738,10 @@ def fetch_esb_color():
 def fetch_weather_data():
     global is_init
 
-    try:
-        res = requests.get('https://www.wunderground.com/weather/us/nj/hoboken')
-    except requests.exceptions.RequestException as e:
-        eprint('unable to connect to www.wunderground.com. Information: ')
-        eprint('\t', e, sep='')
-        return None
+    data = crawl_data('https://www.wunderground.com/weather/us/nj/hoboken')
+    if not data:
+        return
 
-    c = res.content
-    data = BeautifulSoup(c, 'html.parser')
     try:
         phrase_now = str(data.find('div', id='curCond').contents[0].contents[0])
     except AttributeError as e:
@@ -808,7 +789,7 @@ def parse_calendar_event():
 
 
 def crawl_twitter_accounts():
-    global priorities, rangers_won, steelers_won
+    global priorities
 
     consumer_key = '8jQgMroN3l5lOgZ4gg8PY6PsD'
     consumer_secret = 'ZmpFmplX3qXdIQyFdMXeS61o4kHMGPFXw3lEwkGIODwYW34mZf'
@@ -820,10 +801,9 @@ def crawl_twitter_accounts():
 
     api = tweepy.API(auth, timeout=5)
     
-    steelers_won = did_team_win(api, 'Steelers')
-    rangers_won = did_team_win(api, 'Rangers')
-
-    if steelers_won or rangers_won:
+    team_won.update({team: did_team_win(api, team) for team in team_won})
+    
+    if any(team_won.values())
         priorities['sports'] = 3
 
 
@@ -847,14 +827,10 @@ def did_team_win(api: tweepy.API, team_name: str) -> bool:
 def fetch_stock_data():
     global priorities, DJI_difference, stocks_color_str
 
-    try:
-        res = requests.get('https://www.google.com/finance?q=INDEXDJX:.DJI')
-    except requests.exceptions.RequestException as e:
-        eprint('unable to connect to Google Finance. Information: ')
-        eprint('\t', e, sep='')
-        return
-
-    data = BeautifulSoup(res.content, 'html.parser')
+    data = crawl_data('https://www.google.com/finance?q=INDEXDJX:.DJI')
+    if not data:
+      return
+    
     DJI_difference = float(data.find('span', id='ref_983582_c').string)
     
     if 200.0 <= DJI_difference < 300:
@@ -879,6 +855,17 @@ def send_color_str(col_string: bytes):
         # eprint('No connection to arduino!')
 
 
+def crawl_data(url):
+    try:
+        res = requests.get(url)
+    except requests.RequestException as e:
+        eprint('unable to connect to', url.split('/')[2], 'Information: ')
+        eprint('\t', e, sep='')
+        return None
+    else:
+        return BeautifulSoup(res.content, 'html.parser')
+        
+
 def debug_print():
     """
     Print key global variables.
@@ -895,8 +882,7 @@ def debug_print():
     weather_refresh_t: {weather_refresh_t}
     DJI_difference: {DJI_difference}
     stocks_color_str: {stocks_color_str}
-    steelers_won: {steelers_won}
-    rangers_won: {rangers_won}
+    team_won: {team_won}
     priorities: {priorities}
     -----------------------------
     '''.format(**globals(), sun_set_color=sun_colors['set']))
