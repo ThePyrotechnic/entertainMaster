@@ -253,6 +253,7 @@ def master_timer():
                 t = threading.Thread(target=event_master, daemon=True)
                 t.start()
         if datetime.datetime.now().hour == 4:
+            arduino.close()
             return
         else:
             time.sleep(EVENT_THREAD_INTERVAL * 60)  # change to seconds when debugging
@@ -672,6 +673,9 @@ def random_color(from_table: bool = False, bright: bool = False, dim: bool = Fal
 def get_weather_priority():
     global cur_weather
 
+    if cur_weather is None:
+        return -1
+
     if 'thunder' in cur_weather.lower():
         return 5
     if 'rain' in cur_weather.lower():
@@ -701,7 +705,7 @@ def get_sleep_priority():
     bed_time = 0
     wake_time = 6
 
-    if bed_time <= current_hour <= wake_time:
+    if bed_time <= current_hour < wake_time:
         return 6
     else:
         return -1
